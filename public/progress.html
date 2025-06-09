@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Learning Progress - LearnAndEarn</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="progress.css">
+</head>
+<body>
+    <div id="userHeader" class="user-header" style="display: none;">
+        <div class="user-info">
+            <span>Welcome, <span class="user-name" id="userName"></span></span>
+            <span class="user-role" id="userRole"></span>
+        </div>
+        <div class="user-actions">
+            <a href="/">Videos</a>
+            <a href="/profile.html">Mein Profil</a>
+            <a href="/admin" id="adminLink" style="display: none;">Admin Panel</a>
+            <button class="logout-button" onclick="logout()">Logout</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h1>Mein Lernfortschritt</h1>
+        
+        <div id="authRequired" style="display: none;">
+            <p>Bitte <a href="/login.html">einloggen</a> um Ihren Fortschritt zu sehen.</p>
+        </div>
+        
+        <div id="progressContent" style="display: none;">
+            <!-- User Profile Summary -->
+            <div class="profile-summary">
+                <h3>Mein Profil</h3>
+                <div class="profile-details">
+                    <p><strong>Land:</strong> <span id="userCountry">-</span></p>
+                    <p><strong>Muttersprache:</strong> <span id="userMotherLanguage">-</span></p>
+                    <p><strong>Zeitzone:</strong> <span id="userTimezone">-</span></p>
+                    <a href="/profile.html" class="edit-profile-link">Profil bearbeiten →</a>
+                </div>
+            </div>
+            
+            <!-- Overall Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Videos Practiced</h3>
+                    <div class="stat-value" id="videosPracticed">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Practice Time</h3>
+                    <div class="stat-value" id="totalTime">0h 0m</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Sessions</h3>
+                    <div class="stat-value" id="totalSessions">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Average Accuracy</h3>
+                    <div class="stat-value" id="avgAccuracy">0%</div>
+                </div>
+            </div>
+            
+            <!-- Recent Activity Chart -->
+            <div class="section-container">
+                <h2>Recent Activity (Last 7 Days)</h2>
+                <div id="recentActivityChart" class="activity-chart"></div>
+            </div>
+            
+            <!-- Top Videos -->
+            <div class="section-container">
+                <h2>Most Practiced Videos</h2>
+                <div id="topVideosList" class="top-videos-list"></div>
+            </div>
+            
+            <!-- Problem Sentences -->
+            <div class="section-container">
+                <h2>Sentences That Need More Practice</h2>
+                <p class="section-description">These sentences have an average accuracy below 70%</p>
+                <div id="problemSentencesList" class="problem-sentences-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="auth.js"></script>
+    <script src="progress.js"></script>
+</body>
+</html> 

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="de" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <title>Mein Profil - LearnAndEarn</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
+    <style>
+        .profile-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .profile-form {
+            margin-top: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .form-group select {
+            cursor: pointer;
+        }
+        
+        .profile-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .profile-info p {
+            margin: 5px 0;
+        }
+        
+        .btn-save {
+            background: #2ecc71;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .btn-save:hover {
+            background: #27ae60;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="userHeader" class="user-header" style="display: none;">
+        <div class="user-info">
+            <span>Willkommen, <span class="user-name" id="userName"></span></span>
+            <span class="user-role" id="userRole"></span>
+        </div>
+        <div class="user-actions">
+            <a href="/progress.html">Mein Fortschritt</a>
+            <a href="/">Videos</a>
+            <a href="/admin" id="adminLink" style="display: none;">Admin Panel</a>
+            <button class="logout-button" onclick="logout()">Logout</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="profile-container">
+            <h1>Mein Profil</h1>
+            
+            <div id="successMessage" class="success-message"></div>
+            <div id="errorMessage" class="error-message"></div>
+            
+            <div class="profile-info">
+                <p><strong>E-Mail:</strong> <span id="userEmail"></span></p>
+                <p><strong>Benutzername:</strong> <span id="userUsername"></span></p>
+            </div>
+            
+            <form id="profileForm" class="profile-form">
+                <div class="form-group">
+                    <label for="country">Land</label>
+                    <select id="country" name="country">
+                        <option value="">Bitte wählen...</option>
+                        <option value="Deutschland">Deutschland</option>
+                        <option value="Österreich">Österreich</option>
+                        <option value="Schweiz">Schweiz</option>
+                        <option value="Frankreich">Frankreich</option>
+                        <option value="Italien">Italien</option>
+                        <option value="Spanien">Spanien</option>
+                        <option value="Polen">Polen</option>
+                        <option value="Türkei">Türkei</option>
+                        <option value="Russland">Russland</option>
+                        <option value="USA">USA</option>
+                        <option value="UK">UK</option>
+                        <option value="China">China</option>
+                        <option value="Japan">Japan</option>
+                        <option value="Andere">Andere</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="motherLanguage">Muttersprache</label>
+                    <select id="motherLanguage" name="motherLanguage">
+                        <option value="">Bitte wählen...</option>
+                        <option value="Deutsch">Deutsch</option>
+                        <option value="Englisch">Englisch</option>
+                        <option value="Französisch">Französisch</option>
+                        <option value="Spanisch">Spanisch</option>
+                        <option value="Italienisch">Italienisch</option>
+                        <option value="Portugiesisch">Portugiesisch</option>
+                        <option value="Polnisch">Polnisch</option>
+                        <option value="Türkisch">Türkisch</option>
+                        <option value="Russisch">Russisch</option>
+                        <option value="Arabisch">Arabisch</option>
+                        <option value="Chinesisch">Chinesisch</option>
+                        <option value="Japanisch">Japanisch</option>
+                        <option value="Hindi">Hindi</option>
+                        <option value="Andere">Andere</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="timezone">Zeitzone</label>
+                    <select id="timezone" name="timezone">
+                        <option value="Europe/Berlin">Berlin (MEZ/MESZ)</option>
+                        <option value="Europe/Vienna">Wien</option>
+                        <option value="Europe/Zurich">Zürich</option>
+                        <option value="Europe/London">London</option>
+                        <option value="Europe/Paris">Paris</option>
+                        <option value="Europe/Madrid">Madrid</option>
+                        <option value="Europe/Rome">Rom</option>
+                        <option value="Europe/Moscow">Moskau</option>
+                        <option value="America/New_York">New York</option>
+                        <option value="America/Chicago">Chicago</option>
+                        <option value="America/Los_Angeles">Los Angeles</option>
+                        <option value="Asia/Tokyo">Tokyo</option>
+                        <option value="Asia/Shanghai">Shanghai</option>
+                        <option value="Asia/Dubai">Dubai</option>
+                        <option value="Australia/Sydney">Sydney</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn-save">Profil speichern</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="auth.js"></script>
+    <script src="profile.js"></script>
+</body>
+</html> 

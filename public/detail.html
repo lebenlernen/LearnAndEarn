@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="de" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <meta name="robots" content="notranslate">
+    <title>Video Detail - LearnAndEarn</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
+    <style>
+        /* Prevent text selection on learning content */
+        .notranslate {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* Allow selection only in specific areas */
+        .selectable-sentence {
+            -webkit-user-select: text !important;
+            -moz-user-select: text !important;
+            -ms-user-select: text !important;
+            user-select: text !important;
+        }
+        
+        /* Disable right-click on learning content */
+        .learning-content {
+            -webkit-touch-callout: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="userHeader" class="user-header" style="display: none;">
+        <div class="user-info">
+            <span>Welcome, <span class="user-name" id="userName"></span></span>
+            <span class="user-role" id="userRole"></span>
+        </div>
+        <div class="user-actions">
+            <a href="/progress.html">My Progress</a>
+            <a href="/admin" id="adminLink" style="display: none;">Admin Panel</a>
+            <button class="logout-button" onclick="logout()">Logout</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="header-nav">
+            <a href="/" class="back-button">← Back to Search</a>
+        </div>
+        
+        <div id="videoDetail" class="video-detail-container">
+            <p class="loading">Loading video details...</p>
+        </div>
+        
+        <div class="video-summary">
+            <h3>Summary</h3>
+            <div id="summaryContent" class="summary-content learning-content notranslate">
+                <!-- Summary will be loaded here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dictation Modal -->
+    <div id="dictationModal" class="dictation-modal" style="display: none;">
+        <div class="dictation-content">
+            <span class="close-button">&times;</span>
+            <h2>Sprechübung</h2>
+            
+            <div class="sentence-container">
+                <div id="sentenceDisplay" class="sentence-display selectable-sentence"></div>
+                <p class="selection-hint">💡 Tipp: Markieren Sie einen Teil des Satzes, um bestimmte Phrasen zu üben</p>
+            </div>
+            
+            <div class="dictation-controls">
+                <button id="playButton" class="control-button">
+                    <span class="play-icon">▶</span> Audio abspielen
+                </button>
+                <button id="slowPlayButton" class="control-button">
+                    <span class="play-icon">▶</span> Langsam abspielen
+                </button>
+            </div>
+            
+            <div class="speech-controls">
+                <button id="startSpeechButton" class="speech-button">
+                    <span class="mic-icon">🎤</span> Sprechen beginnen
+                </button>
+                <div id="listeningIndicator" class="listening-indicator" style="display: none;">
+                    <span class="pulse"></span>
+                    Zuhören...
+                </div>
+            </div>
+            
+            <div id="speechResult" class="speech-result">
+                <p class="result-label">Ihre Aussprache:</p>
+                <div id="transcribedText" class="transcribed-text"></div>
+            </div>
+            
+            <div id="comparisonResult" class="comparison-result"></div>
+            
+            <div class="dictation-buttons">
+                <button id="viewHistoryButton" class="history-button" style="display: none;">Übungsverlauf anzeigen</button>
+            </div>
+            
+            <div id="attemptCounter" class="attempt-counter" style="display: none;">
+                <span class="attempt-count"></span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Practice History Modal -->
+    <div id="historyModal" class="history-modal" style="display: none;">
+        <div class="history-content">
+            <span class="history-close">&times;</span>
+            <h2>Übungsverlauf</h2>
+            <div id="historyList" class="history-list">
+                <p class="loading">Verlauf wird geladen...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="auth.js"></script>
+    <script src="detail.js"></script>
+</body>
+</html>

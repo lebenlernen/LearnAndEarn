@@ -1,0 +1,23 @@
+{
+  "name": "yellow_pages",
+  "version": "1.0.0",
+  "description": "This file is for outlining the requirements and features of the LearnAndEarn project.  we are migrating an odoo project for language learners to node.js This is the yaml file for the postgres server /Users/thomassee/Docker/containers/mark_learnandearn/docker-compose.yml we go on using the tables. The used tables like our_videos begin typically with \"our_\"",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "connect-pg-simple": "^10.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-session": "^1.18.1",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.0"
+  }
+}

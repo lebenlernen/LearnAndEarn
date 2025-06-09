@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LearnAndEarn - Video Search</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+    <div id="userHeader" class="user-header" style="display: none;">
+        <div class="user-info">
+            <span>Welcome, <span class="user-name" id="userName"></span></span>
+            <span class="user-role" id="userRole"></span>
+        </div>
+        <div class="user-actions">
+            <a href="/progress.html">My Progress</a>
+            <a href="/profile.html">My Profile</a>
+            <a href="/admin" id="adminLink" style="display: none;">Admin Panel</a>
+            <button class="logout-button" onclick="logout()">Logout</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h1>LearnAndEarn Video Search</h1>
+        
+        <div id="authPrompt" style="display: none; text-align: center; margin-bottom: 20px;">
+            <p>Please <a href="/login.html">login</a> to access all features.</p>
+        </div>
+        
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search for videos..." value="">
+            <select id="categoryFilter" class="category-filter">
+                <option value="">All Categories</option>
+            </select>
+            <button id="searchButton">Search</button>
+        </div>
+        
+        <div id="searchInfo" class="search-info"></div>
+        
+        <div id="resultsContainer" class="results-container"></div>
+        
+        <div id="paginationContainer" class="pagination-container"></div>
+    </div>
+    
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
