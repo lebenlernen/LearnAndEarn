@@ -5,8 +5,11 @@ const router = express.Router();
 // Middleware to check if user is admin
 const isAdmin = async (req, res, next) => {
     if (!req.session.userId) {
+        console.log('No userId in session');
         return res.status(401).json({ error: 'Not authenticated' });
     }
+    
+    console.log('Checking admin access for user:', req.session.userId);
     
     try {
         const result = await req.db.query(
@@ -16,6 +19,8 @@ const isAdmin = async (req, res, next) => {
              WHERE ur.user_id = $1 AND r.name = 'admin'`,
             [req.session.userId]
         );
+        
+        console.log('Admin check result:', result.rows[0]);
         
         if (result.rows[0].count === '0') {
             return res.status(403).json({ error: 'Admin access required' });
