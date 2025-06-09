@@ -4,8 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - User Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+        }
+        
         .admin-container {
             max-width: 1200px;
             margin: 0 auto;
@@ -187,28 +197,29 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="user-header" id="userHeader" style="display: none;">
-            <div class="nav-links">
-                <a href="/home.html" class="nav-link">Home</a>
-                <a href="/search.html" class="nav-link">Video Search</a>
-                <a href="/progress.html" class="nav-link">My Progress</a>
+    <div class="user-header" id="userHeader" style="display: none;">
+        <div class="nav-links">
+            <a href="/home.html" class="nav-link">Home</a>
+            <a href="/search.html" class="nav-link">Video Search</a>
+            <a href="/progress.html" class="nav-link">My Progress</a>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <span>Welcome, <span class="user-name" id="userName"></span></span>
+                <span class="user-role" id="userRole"></span>
             </div>
-            <div class="user-menu">
-                <div class="user-info">
-                    <span>Welcome, <span class="user-name" id="userName"></span></span>
-                    <span class="user-role" id="userRole"></span>
-                </div>
-                <div class="user-actions">
-                    <a href="/profile.html">My Profile</a>
-                    <button class="logout-button" onclick="logout()">Logout</button>
-                </div>
+            <div class="user-actions">
+                <a href="/profile.html">My Profile</a>
+                <button class="logout-button" onclick="logout()">Logout</button>
             </div>
         </div>
+    </div>
+    
+    <div class="container">
         
         <div class="admin-container">
             <div class="admin-header">
-                <h1>User Management</h1>
+                <h1>Admin Panel - User Management</h1>
                 <button class="btn btn-primary" onclick="location.reload()">Refresh</button>
             </div>
             

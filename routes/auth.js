@@ -176,7 +176,7 @@ router.post('/logout', (req, res) => {
 router.get('/me', isAuthenticated, async (req, res) => {
     try {
         const result = await req.db.query(
-            'SELECT id, email, username, is_active FROM our_users WHERE id = $1',
+            'SELECT id, email, username, is_active, country, mother_language, timezone FROM our_users WHERE id = $1',
             [req.session.userId]
         );
         

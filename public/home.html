@@ -1,16 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LearnAndEarn - Learn German with YouTube Videos</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
 <body>
-    <div class="page-container">
-      <!-- Alles hier wie gehabt -->
-      <div id="userHeader" class="user-header" style="display: none;">
-        ...
+  <div class="page-container">
+    <div id="userHeader" class="user-header" style="display: none;">
+      <div class="nav-links">
+        <a href="/home.html" class="nav-link active">Home</a>
+        <a href="/search.html" class="nav-link">Video Search</a>
+        <a href="/progress.html" class="nav-link">My Progress</a>
       </div>
-  
-      <div class="hero-section">
-        ...
-      </div>
-  
-      <div class="container">
-        ...
+      <div class="user-menu">
+        <div class="user-info">
+          <span>Welcome, <span class="user-name" id="userName"></span></span>
+          <span class="user-role" id="userRole"></span>
+        </div>
+        <div class="user-actions">
+          <a href="/profile.html">My Profile</a>
+          <button class="logout-button" onclick="logout()">Logout</button>
+        </div>
       </div>
     </div>
-  </body>
+
+    <div class="hero-section">
+      <h1>LearnAndEarn</h1>
+      <p>Master German through engaging YouTube videos with AI-powered learning tools</p>
+      <div class="cta-buttons">
+        <a href="/search.html" class="cta-button cta-primary">Start Learning</a>
+        <a href="/login.html" class="cta-button cta-secondary" id="loginButton">Login / Register</a>
+      </div>
+    </div>
+
+    <div class="features-section">
+      <h2 style="text-align: center;">Why LearnAndEarn?</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🎥</div>
+          <h3>Real YouTube Content</h3>
+          <p>Learn German with authentic YouTube videos covering various topics and difficulty levels</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3>AI-Powered Summaries</h3>
+          <p>Get intelligent summaries of video content to understand key points quickly</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎤</div>
+          <h3>Speech Recognition</h3>
+          <p>Practice pronunciation with our advanced speech recognition system that provides instant feedback</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Progress Tracking</h3>
+          <p>Monitor your learning journey with detailed progress reports and practice history</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>Interactive Exercises</h3>
+          <p>Engage with clickable sentences, dictation practice, and color-coded feedback</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📚</div>
+          <h3>Organized Learning</h3>
+          <p>Videos categorized by topic and difficulty to match your learning level</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="how-it-works">
+      <h2 style="text-align: center;">How It Works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <h3>Choose a Video</h3>
+          <p>Browse our curated collection of German YouTube videos</p>
+        </div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <h3>Watch & Learn</h3>
+          <p>Watch videos with AI-generated summaries and transcripts</p>
+        </div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <h3>Practice Speaking</h3>
+          <p>Click on sentences to practice pronunciation with instant feedback</p>
+        </div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <h3>Track Progress</h3>
+          <p>Review your practice history and identify areas for improvement</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="guest-section" id="guestSection">
+      <h2>Ready to Start Learning?</h2>
+      <p>Join thousands of learners improving their German with real-world content</p>
+      <a href="/login.html" class="cta-button cta-primary">Create Free Account</a>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await updateAuthUI();
+      const authData = await checkAuth();
+      if (authData.authenticated) {
+        document.getElementById('loginButton').style.display = 'none';
+        document.getElementById('guestSection').style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
