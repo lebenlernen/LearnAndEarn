@@ -22,10 +22,15 @@ document.addEventListener('DOMContentLoaded', () => {
             authPrompt.style.display = 'none';
             
             document.getElementById('userName').textContent = authData.user.username;
-            document.getElementById('userRole').textContent = authData.user.role;
             
-            if (authData.user.role === 'admin') {
-                document.getElementById('userRole').classList.add('admin');
+            // Handle multiple roles
+            const roles = authData.user.roles || [authData.user.role || 'student'];
+            const roleElement = document.getElementById('userRole');
+            roleElement.textContent = roles.join(', ');
+            
+            // Check if user has admin role
+            if (roles.includes('admin')) {
+                roleElement.classList.add('admin');
                 document.getElementById('adminLink').style.display = 'block';
             }
         } else {

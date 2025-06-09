@@ -66,6 +66,10 @@ app.use('/api/auth', authRoutes);
 const progressRoutes = require('./routes/progress');
 app.use('/api/progress', progressRoutes);
 
+// Import admin routes
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
+
 // Import auth middleware
 const { optionalAuth, isAuthenticated, isAdmin } = require('./middleware/auth');
 
