@@ -70,6 +70,10 @@ app.use('/api/progress', progressRoutes);
 const adminRoutes = require('./routes/admin');
 app.use('/api/admin', adminRoutes);
 
+// Import vocabulary routes
+const vocabularyRoutes = require('./routes/vocabulary');
+app.use('/api/vocabulary', vocabularyRoutes);
+
 // Import auth middleware
 const { optionalAuth, isAuthenticated, isAdmin } = require('./middleware/auth');
 
@@ -92,34 +96,72 @@ app.get('/api/categories', optionalAuth, async (req, res) => {
 
 app.get('/api/videos/search', optionalAuth, async (req, res) => {
     try {
-        const { query = '', category = '', page = 1, limit = 25 } = req.query;
+        const { 
+            query = '', 
+            category = '', 
+            page = 1, 
+            limit = 25,
+            hasVocabulary = '',
+            hasClozeTest = '',
+            hasQuestions = ''
+        } = req.query;
         const offset = (page - 1) * limit;
         
         let whereClause = 'WHERE 1=1';
+        let havingClause = '';
         const params = [];
+        const havingConditions = [];
         
         if (query) {
             params.push(`%${query}%`);
-            whereClause += ` AND (title ILIKE $${params.length} OR description ILIKE $${params.length})`;
+            whereClause += ` AND (v.title ILIKE $${params.length} OR v.description ILIKE $${params.length})`;
         }
         
         if (category) {
             params.push(category);
-            whereClause += ` AND _type = $${params.length}`;
+            whereClause += ` AND v._type = $${params.length}`;
+        }
+        
+        // Handle feature filters
+        if (hasVocabulary === 'true') {
+            havingConditions.push('EXISTS(SELECT 1 FROM our_word_list wl WHERE wl.video_id = v.id)');
+        }
+        
+        if (hasClozeTest === 'true') {
+            havingConditions.push('EXISTS(SELECT 1 FROM our_video_cloze vc WHERE vc.video_id = v.id)');
+        }
+        
+        if (hasQuestions === 'true') {
+            havingConditions.push('EXISTS(SELECT 1 FROM our_video_question vq WHERE vq.video_id = v.id)');
+        }
+        
+        if (havingConditions.length > 0) {
+            whereClause += ' AND ' + havingConditions.join(' AND ');
         }
         
         // Get total count
-        const countQuery = `SELECT COUNT(*) FROM our_videos ${whereClause}`;
+        const countQuery = `SELECT COUNT(*) FROM our_videos v ${whereClause}`;
         const countResult = await pool.query(countQuery, params);
         const totalCount = parseInt(countResult.rows[0].count);
         
-        // Get paginated results
+        // Get paginated results with feature indicators
         params.push(limit, offset);
         const dataQuery = `
-            SELECT id, video_id, title, description, channel, _type, duration, views 
-            FROM our_videos 
+            SELECT 
+                v.id, 
+                v.video_id, 
+                v.title, 
+                v.description, 
+                v.channel, 
+                v._type, 
+                v.duration, 
+                v.views,
+                EXISTS(SELECT 1 FROM our_word_list wl WHERE wl.video_id = v.id) as "hasVocabulary",
+                EXISTS(SELECT 1 FROM our_video_cloze vc WHERE vc.video_id = v.id) as "hasClozeTest",
+                EXISTS(SELECT 1 FROM our_video_question vq WHERE vq.video_id = v.id) as "hasQuestions"
+            FROM our_videos v
             ${whereClause}
-            ORDER BY id DESC
+            ORDER BY v.id DESC
             LIMIT $${params.length - 1} OFFSET $${params.length}
         `;
         const dataResult = await pool.query(dataQuery, params);
