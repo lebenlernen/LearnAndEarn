@@ -316,6 +316,30 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('comparisonResult').innerHTML = '';
         }
         
+        // Re-attach play button event listeners
+        const playButton = document.getElementById('playButton');
+        const slowPlayButton = document.getElementById('slowPlayButton');
+        
+        if (playButton) {
+            // Remove old listener and add new one
+            playButton.replaceWith(playButton.cloneNode(true));
+            const newPlayButton = document.getElementById('playButton');
+            newPlayButton.addEventListener('click', () => {
+                const textToPlay = currentSelectedText || currentFullSentence;
+                speakText(textToPlay, 1.0);
+            });
+        }
+        
+        if (slowPlayButton) {
+            // Remove old listener and add new one
+            slowPlayButton.replaceWith(slowPlayButton.cloneNode(true));
+            const newSlowPlayButton = document.getElementById('slowPlayButton');
+            newSlowPlayButton.addEventListener('click', () => {
+                const textToPlay = currentSelectedText || currentFullSentence;
+                speakText(textToPlay, 0.6);
+            });
+        }
+        
         // Check if user is logged in to show history button and load attempt count
         checkAuth().then(authData => {
             const historyButton = document.getElementById('viewHistoryButton');
