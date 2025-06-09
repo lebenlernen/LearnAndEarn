@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { isAuthenticated } = require('../middleware/auth');
 
 // Get vocabulary for a specific video
-router.get('/video/:videoId', requireAuth, async (req, res) => {
+router.get('/video/:videoId', isAuthenticated, async (req, res) => {
     try {
         const { videoId } = req.params;
         
         // First, let's check the structure of our_word_list
-        const tableInfo = await pool.query(`
+        const tableInfo = await req.db.query(`
             SELECT column_name, data_type 
             FROM information_schema.columns 
             WHERE table_name = 'our_word_list' 
@@ -26,7 +25,7 @@ router.get('/video/:videoId', requireAuth, async (req, res) => {
             LIMIT 10
         `;
         
-        const wordsResult = await pool.query(wordsQuery, [videoId]);
+        const wordsResult = await req.db.query(wordsQuery, [videoId]);
         
         res.json({
             success: true,
@@ -46,10 +45,10 @@ router.get('/video/:videoId', requireAuth, async (req, res) => {
 });
 
 // Get all vocabulary with translations
-router.get('/all', requireAuth, async (req, res) => {
+router.get('/all', isAuthenticated, async (req, res) => {
     try {
         // Check structure of our_vocabulary_list
-        const tableInfo = await pool.query(`
+        const tableInfo = await req.db.query(`
             SELECT column_name, data_type 
             FROM information_schema.columns 
             WHERE table_name = 'our_vocabulary_list' 
@@ -65,7 +64,7 @@ router.get('/all', requireAuth, async (req, res) => {
             LIMIT 10
         `;
         
-        const vocabResult = await pool.query(vocabQuery);
+        const vocabResult = await req.db.query(vocabQuery);
         
         res.json({
             success: true,
@@ -85,7 +84,7 @@ router.get('/all', requireAuth, async (req, res) => {
 });
 
 // Check if video has vocabulary
-router.get('/check/:videoId', requireAuth, async (req, res) => {
+router.get('/check/:videoId', isAuthenticated, async (req, res) => {
     try {
         const { videoId } = req.params;
         
@@ -95,7 +94,7 @@ router.get('/check/:videoId', requireAuth, async (req, res) => {
             WHERE video_id = $1
         `;
         
-        const result = await pool.query(checkQuery, [videoId]);
+        const result = await req.db.query(checkQuery, [videoId]);
         const hasVocabulary = result.rows[0].word_count > 0;
         
         res.json({

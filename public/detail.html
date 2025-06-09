@@ -36,11 +36,12 @@
 </head>
 <body>
     <div id="userHeader" class="user-header" style="display: none;">
-        <div class="nav-links">
-            <a href="/home.html" class="nav-link">Home</a>
-            <a href="/search.html" class="nav-link">Video Search</a>
-            <a href="/progress.html" class="nav-link">My Progress</a>
-        </div>
+                    <div class="nav-links">
+                <a href="/home.html" class="nav-link">Home</a>
+                <a href="/search.html" class="nav-link">Video Search</a>
+                <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
+                <a href="/progress.html" class="nav-link">My Progress</a>
+            </div>
         <div class="user-menu">
             <div class="user-info">
                 <span>Welcome, <span class="user-name" id="userName"></span></span>
@@ -123,7 +124,7 @@
             <h2>Vokabeln (Vocabulary)</h2>
             <div class="vocabulary-container">
                 <p class="placeholder-text">Vocabulary exercises will be available here soon.</p>
-                <button class="btn btn-primary" onclick="window.location.href='/vocabulary.html?video=' + videoId">
+                <button class="btn btn-primary" id="startVocabularyBtn">
                     Start Vocabulary Practice
                 </button>
             </div>

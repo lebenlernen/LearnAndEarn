@@ -124,15 +124,15 @@ app.get('/api/videos/search', optionalAuth, async (req, res) => {
         
         // Handle feature filters
         if (hasVocabulary === 'true') {
-            havingConditions.push('EXISTS(SELECT 1 FROM our_word_list wl WHERE wl.video_id = v.id)');
+            havingConditions.push('EXISTS(SELECT 1 FROM our_word_list wl WHERE wl.video_id = v.id::text)');
         }
         
         if (hasClozeTest === 'true') {
-            havingConditions.push('EXISTS(SELECT 1 FROM our_video_cloze vc WHERE vc.video_id = v.id)');
+            havingConditions.push('EXISTS(SELECT 1 FROM our_video_cloze vc WHERE vc.video_id = v.id::text)');
         }
         
         if (hasQuestions === 'true') {
-            havingConditions.push('EXISTS(SELECT 1 FROM our_video_question vq WHERE vq.video_id = v.id)');
+            havingConditions.push('EXISTS(SELECT 1 FROM our_video_question vq WHERE vq.video_id = v.id::text)');
         }
         
         if (havingConditions.length > 0) {
@@ -156,9 +156,9 @@ app.get('/api/videos/search', optionalAuth, async (req, res) => {
                 v._type, 
                 v.duration, 
                 v.views,
-                EXISTS(SELECT 1 FROM our_word_list wl WHERE wl.video_id = v.id) as "hasVocabulary",
-                EXISTS(SELECT 1 FROM our_video_cloze vc WHERE vc.video_id = v.id) as "hasClozeTest",
-                EXISTS(SELECT 1 FROM our_video_question vq WHERE vq.video_id = v.id) as "hasQuestions"
+                EXISTS(SELECT 1 FROM our_word_list wl WHERE wl.video_id = v.id::text) as "hasVocabulary",
+                EXISTS(SELECT 1 FROM our_video_cloze vc WHERE vc.video_id = v.id::text) as "hasClozeTest",
+                EXISTS(SELECT 1 FROM our_video_question vq WHERE vq.video_id = v.id::text) as "hasQuestions"
             FROM our_videos v
             ${whereClause}
             ORDER BY v.id DESC

@@ -58,6 +58,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // Setup vocabulary button
+    const setupVocabularyButton = () => {
+        const vocabBtn = document.getElementById('startVocabularyBtn');
+        if (vocabBtn) {
+            vocabBtn.addEventListener('click', () => {
+                window.location.href = `/vocabulary.html?video=${videoId}`;
+            });
+        }
+    };
+    
     // Fetch video details
     const fetchVideoDetails = async () => {
         try {
@@ -115,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Add event listeners after content is added to DOM
         setupDictationModal();
         makeSentencesClickable();
+        setupVocabularyButton();
     };
     
     // Track current sentence and selection
