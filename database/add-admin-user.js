@@ -13,7 +13,7 @@ const pool = new Pool({
 async function addAdminUser() {
     const email = 'thomas.seewald@gmail.com';
     const username = 'thomas.seewald';
-    const password = 'DResdner';
+    const password = 'Dresdner';
     
     const client = await pool.connect();
     
