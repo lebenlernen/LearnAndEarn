@@ -23,6 +23,17 @@ const loadUserProfile = (user) => {
     document.getElementById('userEmail').textContent = user.email;
     document.getElementById('userUsername').textContent = user.username;
     
+    // Display roles
+    const roles = user.roles || [user.role || 'student'];
+    const rolesElement = document.getElementById('userRoles');
+    rolesElement.innerHTML = roles.map(role => {
+        let roleClass = '';
+        if (role === 'admin') roleClass = 'admin';
+        else if (role === 'teacher') roleClass = 'teacher';
+        else if (role === 'student') roleClass = 'student';
+        return `<span class="user-role ${roleClass}">${role}</span>`;
+    }).join(' ');
+    
     // Set form values
     if (user.country) {
         document.getElementById('country').value = user.country;

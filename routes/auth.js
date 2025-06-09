@@ -217,19 +217,17 @@ router.get('/me', isAuthenticated, async (req, res) => {
 });
 
 // Update user profile
-// TODO: Uncomment after running migration to add country, mother_language, timezone columns
 router.put('/profile', isAuthenticated, async (req, res) => {
-    res.status(503).json({ error: 'Profile update temporarily disabled. Please run database migration first.' });
-    return;
-    /*
     try {
         const { country, mother_language, timezone } = req.body;
         const userId = req.session.userId;
         
-        // Validate timezone
-        const validTimezones = Intl.supportedValuesOf('timeZone');
-        if (timezone && !validTimezones.includes(timezone)) {
-            return res.status(400).json({ error: 'Invalid timezone' });
+        // Validate timezone if provided
+        if (timezone) {
+            const validTimezones = Intl.supportedValuesOf('timeZone');
+            if (!validTimezones.includes(timezone)) {
+                return res.status(400).json({ error: 'Invalid timezone' });
+            }
         }
         
         const result = await req.db.query(
@@ -239,7 +237,7 @@ router.put('/profile', isAuthenticated, async (req, res) => {
                  timezone = $3,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = $4
-             RETURNING id, email, username, role, country, mother_language, timezone`,
+             RETURNING id, email, username, country, mother_language, timezone`,
             [country, mother_language, timezone, userId]
         );
         
@@ -251,7 +249,6 @@ router.put('/profile', isAuthenticated, async (req, res) => {
         console.error('Error updating profile:', error);
         res.status(500).json({ error: 'Failed to update profile' });
     }
-    */
 });
 
 // Change password (authenticated users only)

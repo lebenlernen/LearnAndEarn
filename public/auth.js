@@ -119,6 +119,37 @@ async function checkAuth() {
     }
 }
 
+// Update auth UI (for pages that use it)
+async function updateAuthUI() {
+    const authData = await checkAuth();
+    const userHeader = document.getElementById('userHeader');
+    
+    if (authData.authenticated && userHeader) {
+        userHeader.style.display = 'flex';
+        
+        const userNameElement = document.getElementById('userName');
+        if (userNameElement) {
+            userNameElement.textContent = authData.user.username;
+        }
+        
+        // Handle multiple roles
+        const roles = authData.user.roles || [authData.user.role || 'student'];
+        const roleElement = document.getElementById('userRole');
+        if (roleElement) {
+            roleElement.textContent = roles.join(', ');
+            
+            // Add admin class if user is admin
+            if (roles.includes('admin')) {
+                roleElement.classList.add('admin');
+                const adminLink = document.getElementById('adminLink');
+                if (adminLink) {
+                    adminLink.style.display = 'block';
+                }
+            }
+        }
+    }
+}
+
 // Logout function
 async function logout() {
     try {
