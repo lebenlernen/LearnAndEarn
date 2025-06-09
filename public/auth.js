@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = formData.get('email');
         const username = formData.get('username');
         const password = formData.get('password');
+        const role = formData.get('role') || 'student';
         
         // Client-side validation
         if (password.length < 6) {
@@ -86,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, username, password }),
+                body: JSON.stringify({ email, username, password, role }),
                 credentials: 'same-origin'
             });
             

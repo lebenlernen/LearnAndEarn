@@ -5,7 +5,7 @@ const router = express.Router();
 
 // Register new user
 router.post('/register', async (req, res) => {
-    const { email, username, password } = req.body;
+    const { email, username, password, role } = req.body;
     
     // Validate input
     if (!email || !username || !password) {
@@ -15,6 +15,10 @@ router.post('/register', async (req, res) => {
     if (password.length < 6) {
         return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
+    
+    // Validate role
+    const validRoles = ['student', 'teacher', 'admin'];
+    const userRole = validRoles.includes(role) ? role : 'student';
     
     try {
         // Check if user already exists
@@ -32,8 +36,8 @@ router.post('/register', async (req, res) => {
         
         // Create user
         const result = await req.db.query(
-            'INSERT INTO our_users (email, username, password_hash) VALUES ($1, $2, $3) RETURNING id, email, username, role',
-            [email, username, hashedPassword]
+            'INSERT INTO our_users (email, username, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, email, username, role',
+            [email, username, hashedPassword, userRole]
         );
         
         const user = result.rows[0];
