@@ -28,7 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     const loginError = document.getElementById('loginError');
     
-    loginForm.addEventListener('submit', async (e) => {
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         loginError.textContent = '';
         
@@ -60,12 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
             loginError.textContent = 'An error occurred. Please try again.';
         }
     });
+    }
     
     // Register form
     const registerForm = document.getElementById('registerForm');
     const registerError = document.getElementById('registerError');
     
-    registerForm.addEventListener('submit', async (e) => {
+    if (registerForm) {
+        registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         registerError.textContent = '';
         
@@ -103,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerError.textContent = 'An error occurred. Please try again.';
         }
     });
+    }
 });
 
 // Check authentication status

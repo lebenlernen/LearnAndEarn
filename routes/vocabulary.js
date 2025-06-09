@@ -7,30 +7,80 @@ router.get('/video/:videoId', isAuthenticated, async (req, res) => {
     try {
         const { videoId } = req.params;
         
-        // First, let's check the structure of our_word_list
-        const tableInfo = await req.db.query(`
-            SELECT column_name, data_type 
-            FROM information_schema.columns 
-            WHERE table_name = 'our_word_list' 
-            ORDER BY ordinal_position
-        `);
+        // First, get the YouTube video_id from our_videos table
+        const videoQuery = `
+            SELECT video_id 
+            FROM our_videos 
+            WHERE id = $1
+        `;
+        const videoResult = await req.db.query(videoQuery, [videoId]);
         
-        console.log('our_word_list columns:', tableInfo.rows);
+        if (videoResult.rows.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Video not found' 
+            });
+        }
         
-        // Try to get words for this video
+        const youtubeVideoId = videoResult.rows[0].video_id;
+        console.log('Looking for vocabulary for YouTube video:', youtubeVideoId);
+        
+        // Get words from our_word_list using the YouTube video_id
         const wordsQuery = `
             SELECT * 
             FROM our_word_list 
             WHERE video_id = $1
-            LIMIT 10
+            ORDER BY number
+            LIMIT 50
         `;
         
-        const wordsResult = await req.db.query(wordsQuery, [videoId]);
+        const wordsResult = await req.db.query(wordsQuery, [youtubeVideoId]);
+        
+        // For each word, try to find translations in our_vocabulary_list
+        const wordsWithTranslations = await Promise.all(
+            wordsResult.rows.map(async (wordRow) => {
+                // Parse the words JSON if it exists
+                let germanWords = [];
+                try {
+                    if (wordRow.words) {
+                        germanWords = JSON.parse(wordRow.words);
+                    }
+                } catch (e) {
+                    // If not JSON, treat as single word
+                    germanWords = [wordRow.words];
+                }
+                
+                // Get translations for each German word
+                const translations = await Promise.all(
+                    germanWords.map(async (germanWord) => {
+                        const translationQuery = `
+                            SELECT 
+                                word_in_german,
+                                word_in_english,
+                                word_in_vietnamese,
+                                word_in_arabic,
+                                base_form_of_german_word
+                            FROM our_vocabulary_list
+                            WHERE word_in_german = $1 OR base_form_of_german_word = $1
+                            LIMIT 1
+                        `;
+                        const translationResult = await req.db.query(translationQuery, [germanWord]);
+                        return translationResult.rows[0] || null;
+                    })
+                );
+                
+                return {
+                    ...wordRow,
+                    germanWords,
+                    translations: translations.filter(t => t !== null)
+                };
+            })
+        );
         
         res.json({
             success: true,
-            tableStructure: tableInfo.rows,
-            words: wordsResult.rows,
+            videoId: youtubeVideoId,
+            words: wordsWithTranslations,
             count: wordsResult.rowCount
         });
         

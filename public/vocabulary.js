@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 let currentMode = 'word'; // 'word' or 'sentence'
 let currentWord = null;
+let currentWords = []; // Array of all words for this video
+let currentWordIndex = 0;
 let recognition = null;
 let isRecording = false;
 
@@ -101,11 +103,13 @@ async function loadVideoVocabulary(videoId) {
         const data = await response.json();
         console.log('Vocabulary data:', data);
         
-        // For now, show the structure
+        // Store all words and display first one
         if (data.words && data.words.length > 0) {
+            currentWords = data.words;
+            currentWordIndex = 0;
             showVocabularyContent();
-            // Display first word
-            displayWord(data.words[0]);
+            displayWord(currentWords[currentWordIndex]);
+            updateStats();
         } else {
             showNoVocabularyMessage('This video has no vocabulary available yet.');
         }
@@ -130,41 +134,59 @@ function showNoVocabularyMessage(message) {
     document.getElementById('vocabContent').style.display = 'none';
 }
 
-function displayWord(wordData) {
-    currentWord = wordData;
-    
-    // For now, display whatever fields we have
-    const wordDisplay = document.getElementById('wordDisplay');
-    const contextDisplay = document.getElementById('wordContext');
-    const translationDisplay = document.getElementById('wordTranslation');
-    
-    // Try to find the word field
-    if (wordData.word) {
-        wordDisplay.textContent = wordData.word;
-    } else if (wordData.words) {
-        // Might be a JSON field
-        try {
-            const words = JSON.parse(wordData.words);
-            wordDisplay.textContent = words[0] || 'No word available';
-        } catch {
-            wordDisplay.textContent = wordData.words;
+    function displayWord(wordData) {
+        currentWord = wordData;
+        
+        const wordDisplay = document.getElementById('wordDisplay');
+        const contextDisplay = document.getElementById('wordContext');
+        const translationDisplay = document.getElementById('wordTranslation');
+        
+        // Display German word(s)
+        if (wordData.germanWords && wordData.germanWords.length > 0) {
+            // Show first German word
+            wordDisplay.textContent = wordData.germanWords[0];
+        } else if (wordData.word_base_form) {
+            wordDisplay.textContent = wordData.word_base_form;
+        } else {
+            wordDisplay.textContent = 'No word available';
         }
-    } else {
-        wordDisplay.textContent = 'Word data structure unknown';
+        
+        // Context - for now show all German words if multiple
+        if (wordData.germanWords && wordData.germanWords.length > 1) {
+            contextDisplay.textContent = 'Variations: ' + wordData.germanWords.join(', ');
+        } else {
+            contextDisplay.textContent = '';
+        }
+        
+        // Translation - compile from available translations
+        let translationText = '';
+        if (wordData.translations && wordData.translations.length > 0) {
+            const trans = wordData.translations[0];
+            const translations = [];
+            
+            if (trans.word_in_english) {
+                translations.push(`English: ${trans.word_in_english}`);
+            }
+            if (trans.word_in_vietnamese) {
+                translations.push(`Vietnamese: ${trans.word_in_vietnamese}`);
+            }
+            if (trans.word_in_arabic) {
+                translations.push(`Arabic: ${trans.word_in_arabic}`);
+            }
+            
+            translationText = translations.join(' | ');
+        } else if (wordData.words_in_english) {
+            translationText = `English: ${wordData.words_in_english}`;
+        }
+        
+        translationDisplay.textContent = translationText || 'Translation not available';
+        translationDisplay.style.display = 'none';
+        
+        // Reset UI
+        document.getElementById('showBtn').textContent = 'Show Translation';
+        document.getElementById('difficultyButtons').style.display = 'none';
+        document.getElementById('transcriptionResult').style.display = 'none';
     }
-    
-    // Context (sentence)
-    contextDisplay.textContent = wordData.sentence || wordData.context || '';
-    
-    // Translation (hidden initially)
-    translationDisplay.textContent = wordData.translation || 'Translation not available';
-    translationDisplay.style.display = 'none';
-    
-    // Reset UI
-    document.getElementById('showBtn').textContent = 'Show Translation';
-    document.getElementById('difficultyButtons').style.display = 'none';
-    document.getElementById('transcriptionResult').style.display = 'none';
-}
 
 function speakWord() {
     if (!currentWord) return;
@@ -262,14 +284,26 @@ async function recordDifficulty(difficulty) {
 }
 
 function loadNextWord() {
-    // TODO: Implement loading next word based on SRS algorithm
-    showNoVocabularyMessage('More vocabulary coming soon!');
+    if (currentWords.length === 0) return;
+    
+    currentWordIndex++;
+    if (currentWordIndex >= currentWords.length) {
+        // Finished all words
+        showNoVocabularyMessage('Great job! You\'ve completed all words in this video.');
+        updateStats();
+    } else {
+        displayWord(currentWords[currentWordIndex]);
+    }
 }
 
 // Update stats
 async function updateStats() {
-    // TODO: Fetch from database
-    document.getElementById('newWords').textContent = '0';
-    document.getElementById('reviewWords').textContent = '0';
-    document.getElementById('masteredWords').textContent = '0';
+    // For now, show current progress through words
+    const totalWords = currentWords.length;
+    const completed = currentWordIndex;
+    const remaining = totalWords - completed - 1;
+    
+    document.getElementById('newWords').textContent = remaining > 0 ? remaining : 0;
+    document.getElementById('reviewWords').textContent = completed;
+    document.getElementById('masteredWords').textContent = '0'; // TODO: Track from database
 } 

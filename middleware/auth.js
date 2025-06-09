@@ -4,8 +4,16 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
 
 // Middleware to check if user is authenticated
-const isAuthenticated = (req, res, next) => {
+const isAuthenticated = async (req, res, next) => {
     if (req.session && req.session.userId) {
+        // Set user object on request
+        req.user = {
+            id: req.session.userId,
+            email: req.session.email,
+            username: req.session.username,
+            role: req.session.role || (req.session.roles ? req.session.roles[0] : 'student'),
+            roles: req.session.roles || [req.session.role || 'student']
+        };
         next();
     } else {
         res.status(401).json({ error: 'Authentication required' });

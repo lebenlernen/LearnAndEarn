@@ -123,9 +123,31 @@
         <div class="section vocabulary-section">
             <h2>Vokabeln (Vocabulary)</h2>
             <div class="vocabulary-container">
-                <p class="placeholder-text">Vocabulary exercises will be available here soon.</p>
-                <button class="btn btn-primary" id="startVocabularyBtn">
-                    Start Vocabulary Practice
+                <div id="vocabLoading" class="loading-message" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Processing vocabulary with SpaCy...</p>
+                    <p class="loading-detail">Analyzing German text with NLP model...</p>
+                </div>
+                <div id="vocabContent" style="display: none;">
+                    <div class="vocab-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Words:</span>
+                            <span id="totalWords" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Unique Words:</span>
+                            <span id="uniqueWords" class="stat-value">0</span>
+                        </div>
+                    </div>
+                    <div class="vocab-grid" id="vocabGrid">
+                        <!-- Vocabulary items will be inserted here -->
+                    </div>
+                </div>
+                <div id="vocabPlaceholder" class="placeholder-text">
+                    Click "Load Vocabulary" to analyze this video's vocabulary with SpaCy NLP.
+                </div>
+                <button class="btn btn-primary" id="loadVocabBtn">
+                    Load SpaCy Vocabulary
                 </button>
             </div>
         </div>
@@ -136,7 +158,29 @@
         <div class="section cloze-section">
             <h2>Lückentexte (Cloze Tests)</h2>
             <div class="cloze-container">
-                <p class="placeholder-text">Cloze test exercises will be available here soon.</p>
+                <div id="clozeLoading" class="loading-message" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Generating cloze tests...</p>
+                    <p class="loading-detail">Creating fill-in-the-blank exercises from video sentences...</p>
+                </div>
+                <div id="clozeContent" style="display: none;">
+                    <div class="cloze-test" id="clozeTest">
+                        <p id="clozeSentence" class="cloze-sentence"></p>
+                        <div class="cloze-options" id="clozeOptions"></div>
+                        <div id="clozeResult" class="cloze-result" style="display: none;"></div>
+                        <button id="nextClozeBtn" class="btn btn-secondary" style="display: none;">Next Question</button>
+                    </div>
+                    <div class="cloze-stats">
+                        <span>Question <span id="currentQuestion">1</span> of <span id="totalQuestions">5</span></span>
+                        <span>Score: <span id="clozeScore">0</span>/<span id="clozeAttempts">0</span></span>
+                    </div>
+                </div>
+                <div id="clozePlaceholder" class="placeholder-text">
+                    Click "Start Cloze Tests" to practice with fill-in-the-blank exercises.
+                </div>
+                <button class="btn btn-primary" id="startClozeBtn">
+                    Start Cloze Tests
+                </button>
             </div>
         </div>
     </div>
@@ -149,6 +193,13 @@
             <div id="historyList" class="history-list">
                 <p class="loading">Verlauf wird geladen...</p>
             </div>
+        </div>
+    </div>
+    
+    <!-- Practice Modal for Vocabulary -->
+    <div id="practiceModal" class="modal" style="display: none;">
+        <div class="modal-content practice-content">
+            <!-- Content will be dynamically added by JavaScript -->
         </div>
     </div>
     

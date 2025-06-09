@@ -15,12 +15,17 @@ const speakText = (text, rate) => {
 // Make functions globally available
 window.speakText = speakText;
 
+// Helper function to get video ID
+function getVideoId() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('id');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const videoDetailContainer = document.getElementById('videoDetail');
     
     // Get video ID from URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const videoId = urlParams.get('id');
+    const videoId = getVideoId();
     
     if (!videoId) {
         videoDetailContainer.innerHTML = '<p class="error">No video ID provided.</p>';
@@ -798,6 +803,925 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Fetch video details on page load
     fetchVideoDetails();
+    
+    // SpaCy Vocabulary Features
+    let currentClozeTests = [];
+    let currentClozeIndex = 0;
+    let clozeScore = 0;
+    let clozeAttempts = 0;
+    
+    // Load SpaCy Vocabulary
+    const loadVocabBtn = document.getElementById('loadVocabBtn');
+    if (loadVocabBtn) {
+        loadVocabBtn.addEventListener('click', async () => {
+            const videoId = getVideoId();
+            if (!videoId) return;
+            
+            // Show loading state
+            document.getElementById('vocabPlaceholder').style.display = 'none';
+            document.getElementById('vocabLoading').style.display = 'block';
+            loadVocabBtn.style.display = 'none';
+            
+            try {
+                const response = await fetch(`/api/spacy/vocabulary/${videoId}`, {
+                    credentials: 'same-origin'
+                });
+                
+                if (!response.ok) throw new Error('Failed to load vocabulary');
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    displayVocabulary(data.data);
+                } else {
+                    throw new Error('No vocabulary data available');
+                }
+            } catch (error) {
+                console.error('Error loading vocabulary:', error);
+                document.getElementById('vocabLoading').style.display = 'none';
+                document.getElementById('vocabPlaceholder').textContent = 'Error loading vocabulary. Please try again.';
+                document.getElementById('vocabPlaceholder').style.display = 'block';
+                loadVocabBtn.style.display = 'block';
+            }
+        });
+    }
+    
+    // Display vocabulary
+    function displayVocabulary(vocabData) {
+        document.getElementById('vocabLoading').style.display = 'none';
+        document.getElementById('vocabContent').style.display = 'block';
+        
+        // Update stats
+        document.getElementById('totalWords').textContent = vocabData.count || 0;
+        document.getElementById('uniqueWords').textContent = vocabData.vocabulary?.length || 0;
+        
+        // Display vocabulary grid
+        const vocabGrid = document.getElementById('vocabGrid');
+        vocabGrid.innerHTML = '';
+        
+        // Store vocabulary data globally for dictation
+        window.currentVocabulary = vocabData.vocabulary || [];
+        
+        if (vocabData.vocabulary && vocabData.vocabulary.length > 0) {
+            vocabData.vocabulary.forEach((word, index) => {
+                const wordCard = createWordCard(word, index);
+                vocabGrid.appendChild(wordCard);
+            });
+        } else {
+            vocabGrid.innerHTML = '<p>No vocabulary found for this video.</p>';
+        }
+    }
+    
+    // Create word card
+    function createWordCard(word, index) {
+        const card = document.createElement('div');
+        card.className = 'vocab-card';
+        card.dataset.wordIndex = index;
+        card.dataset.germanWord = word.original_word;
+        
+        const posColors = {
+            'NOUN': '#3498db',
+            'VERB': '#e74c3c',
+            'ADJ': '#f39c12',
+            'ADV': '#9b59b6',
+            'default': '#95a5a6'
+        };
+        
+        const posColor = posColors[word.pos] || posColors.default;
+        
+        // Show translation prominently if available
+        const displayWord = word.translation || `Motherlanguage: ${word.original_word}`;
+        
+        card.innerHTML = `
+            <div class="word-main-translation">${displayWord}</div>
+            <div class="word-dictation-area" id="dictation-${index}" style="display: none;">
+                <button class="dictate-btn" onclick="toggleCardDictation(${index})">
+                    <span class="mic-icon">🎤</span> Start Dictation
+                </button>
+                <div class="dictation-result" id="result-${index}" style="display: none;"></div>
+                <div class="rating-buttons" id="rating-${index}" style="display: none;">
+                    <button onclick="rateWordDirect(${index}, 1)" class="rate-btn easy">😄 Easy</button>
+                    <button onclick="rateWordDirect(${index}, 2)" class="rate-btn good">😊 Good</button>
+                    <button onclick="rateWordDirect(${index}, 3)" class="rate-btn hard">😐 Hard</button>
+                    <button onclick="rateWordDirect(${index}, 4)" class="rate-btn again">😣 Again</button>
+                </div>
+            </div>
+            <div class="word-details-small">
+                <span class="word-pos-small" style="background-color: ${posColor}">${word.pos}</span>
+                <span class="word-freq">×${word.frequency}</span>
+            </div>
+        `;
+        
+        // Store word data for later use
+        card.wordData = word;
+        
+        // Add click event to the translation text only
+        const translationDiv = card.querySelector('.word-main-translation');
+        translationDiv.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            // Toggle dictation area
+            const dictationArea = card.querySelector('.word-dictation-area');
+            const isExpanded = dictationArea.style.display !== 'none';
+            
+            // Collapse all other cards
+            document.querySelectorAll('.vocab-card .word-dictation-area').forEach(area => {
+                area.style.display = 'none';
+            });
+            
+            // Stop any active dictation
+            if (currentCardIndex !== null && currentCardIndex !== index) {
+                stopCardDictation(currentCardIndex);
+            }
+            
+            if (!isExpanded) {
+                // Show dictation area
+                dictationArea.style.display = 'block';
+                
+                // Automatically start dictation
+                setTimeout(() => {
+                    toggleCardDictation(index);
+                }, 100); // Small delay to ensure UI is ready
+            } else {
+                // Hide dictation area
+                dictationArea.style.display = 'none';
+            }
+        });
+        
+        return card;
+    }
+    
+    // Load word context
+    async function loadWordContext(word) {
+        try {
+            const videoId = getVideoId();
+            const response = await fetch(`/api/spacy/word-context/${videoId}/${encodeURIComponent(word)}`, {
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) throw new Error('Failed to load word context');
+            
+            const data = await response.json();
+            if (data.success && data.data) {
+                showWordContextModal(word, data.data);
+            }
+        } catch (error) {
+            console.error('Error loading word context:', error);
+        }
+    }
+    
+    // Show word context modal with spaced repetition
+    function showWordContextModal(word, contextData) {
+        const modal = document.getElementById('practiceModal');
+        const modalContent = modal.querySelector('.modal-content');
+        
+        // Store current word data for practice
+        window.currentVocabWord = {
+            word: word,
+            lemma: contextData.word_info.lemma,
+            pos: contextData.word_info.pos,
+            frequency: contextData.word_info.frequency,
+            translation: contextData.translation,
+            motherLanguage: contextData.mother_language
+        };
+        
+        // Different learning modes based on user preference
+        const learningModes = {
+            translation: contextData.translation && contextData.mother_language !== 'German',
+            context: true,
+            visual: false // Future: add images
+        };
+        
+        modalContent.innerHTML = `
+            <span class="close">&times;</span>
+            <h2>Learn: ${word}</h2>
+            
+            <div class="vocab-practice-container">
+                <!-- Learning Side -->
+                <div id="learningSide" class="vocab-card-side">
+                    <div class="word-main-large">${word}</div>
+                    ${contextData.translation && !contextData.translation.startsWith('[') ? `
+                        <div class="word-translation">
+                            <p class="translation-text">${contextData.translation}</p>
+                            <p class="translation-lang">(${contextData.mother_language})</p>
+                        </div>
+                    ` : contextData.mother_language !== 'German' && contextData.mother_language !== 'Deutsch' ? `
+                        <div class="word-translation no-translation">
+                            <p class="translation-text">Motherlanguage ${contextData.mother_language}</p>
+                            <p class="translation-note">Translation coming soon</p>
+                        </div>
+                    ` : ''}
+                    <div class="word-details">
+                        <p><strong>Base form:</strong> ${contextData.word_info.lemma}</p>
+                        <p><strong>Type:</strong> ${getPosDescription(contextData.word_info.pos)}</p>
+                        <p><strong>Frequency:</strong> ${contextData.word_info.frequency}x in this video</p>
+                    </div>
+                    
+                    <div class="pronunciation-buttons">
+                        <button class="btn btn-primary" onclick="speakWord('${word}')">
+                            🔊 German
+                        </button>
+                        ${contextData.translation && !contextData.translation.startsWith('[') ? `
+                            <button class="btn btn-info" onclick="speakTranslation('${contextData.translation}', '${contextData.mother_language}')">
+                                🔊 ${contextData.mother_language}
+                            </button>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="example-sentences">
+                        <h4>Examples in context:</h4>
+                        ${contextData.example_sentences.slice(0, 3).map(sent => 
+                            `<p class="example-sentence">${highlightWord(sent, word)}</p>`
+                        ).join('') || '<p>No examples found</p>'}
+                    </div>
+                    
+                    <button class="btn btn-success" onclick="showTestSide()">
+                        Test Yourself →
+                    </button>
+                </div>
+                
+                <!-- Testing Side -->
+                <div id="testingSide" class="vocab-card-side" style="display: none;">
+                    <h3>Say this word in German</h3>
+                    
+                    <div class="test-prompt">
+                        <div class="translation-prompt">
+                            <p class="prompt-label">Your task:</p>
+                            ${contextData.translation && !contextData.translation.startsWith('[') ? `
+                                <p class="prompt-text">${contextData.translation}</p>
+                                <p class="prompt-lang">(${contextData.mother_language})</p>
+                            ` : `
+                                <p class="prompt-text">Motherlanguage ${contextData.mother_language}: <strong>${word}</strong></p>
+                                <p class="prompt-instruction">Please say the German word shown above</p>
+                            `}
+                        </div>
+                        
+                        ${contextData.translation && !contextData.translation.startsWith('[') ? `
+                            <div class="word-hint">
+                                <p>Hints:</p>
+                                <p>• Type: <strong>${getPosDescription(contextData.word_info.pos)}</strong></p>
+                                <p>• First letter: <strong>${word.charAt(0).toUpperCase()}</strong></p>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Dictation Section -->
+                    <div class="vocab-dictation-section">
+                        <button id="vocabSpeechButton" class="speech-button" onclick="toggleVocabSpeech()">
+                            <span class="mic-icon">🎤</span> Sprechen beginnen
+                        </button>
+                        
+                        <div id="vocabListeningIndicator" class="listening-indicator" style="display: none;">
+                            <div class="listening-animation">
+                                <span class="pulse"></span>
+                                <span class="pulse"></span>
+                                <span class="pulse"></span>
+                            </div>
+                            <p>Hören zu...</p>
+                        </div>
+                        
+                        <div id="vocabTranscribedText" class="transcribed-text"></div>
+                    </div>
+                    
+                    <div id="recallResult" style="display: none;"></div>
+                    
+                    <div class="difficulty-buttons" style="display: none;">
+                        <p>How difficult was this?</p>
+                        <button class="diff-btn" onclick="rateWord(1)">😄 Easy</button>
+                        <button class="diff-btn" onclick="rateWord(2)">😊 Good</button>
+                        <button class="diff-btn" onclick="rateWord(3)">😐 Hard</button>
+                        <button class="diff-btn" onclick="rateWord(4)">😣 Again</button>
+                    </div>
+                </div>
+                
+                <!-- Statistics Side -->
+                <div id="statsSide" class="vocab-card-side" style="display: none;">
+                    <h3>Your Progress</h3>
+                    <div id="wordStats">Loading...</div>
+                    <button class="btn btn-primary" onclick="location.reload()">Practice More Words</button>
+                </div>
+            </div>
+        `;
+        
+        modal.querySelector('.close').onclick = () => {
+            stopVocabSpeech();
+            modal.style.display = 'none';
+        };
+        modal.style.display = 'block';
+        
+        // Setup vocab speech recognition
+        setupVocabSpeechRecognition();
+        
+        // Load word statistics
+        loadWordStats(word);
+    }
+    
+    // Helper function to get POS description
+    function getPosDescription(pos) {
+        const descriptions = {
+            'NOUN': 'Noun (Substantiv)',
+            'VERB': 'Verb',
+            'ADJ': 'Adjective (Adjektiv)',
+            'ADV': 'Adverb',
+            'PRON': 'Pronoun (Pronomen)',
+            'DET': 'Determiner (Artikel)',
+            'ADP': 'Preposition (Präposition)',
+            'CONJ': 'Conjunction (Konjunktion)',
+            'NUM': 'Number (Zahl)',
+            'PROPN': 'Proper Noun (Eigenname)',
+            'AUX': 'Auxiliary Verb (Hilfsverb)',
+            'PART': 'Particle (Partikel)'
+        };
+        return descriptions[pos] || pos;
+    }
+    
+    // Speak word function
+    window.speakWord = function(word) {
+        speakText(word, 0.8);
+    };
+    
+    // Speak translation
+    window.speakTranslation = function(text, language) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Map language to voice code
+        const langMap = {
+            'English': 'en-US',
+            'Englisch': 'en-US',
+            'Spanish': 'es-ES',
+            'Spanisch': 'es-ES',
+            'French': 'fr-FR',
+            'Französisch': 'fr-FR',
+            'Italian': 'it-IT',
+            'Italienisch': 'it-IT',
+            'Portuguese': 'pt-PT',
+            'Portugiesisch': 'pt-PT',
+            'Russian': 'ru-RU',
+            'Russisch': 'ru-RU',
+            'Chinese': 'zh-CN',
+            'Chinesisch': 'zh-CN',
+            'Japanese': 'ja-JP',
+            'Japanisch': 'ja-JP',
+            'Turkish': 'tr-TR',
+            'Türkisch': 'tr-TR',
+            'Arabic': 'ar-SA',
+            'Arabisch': 'ar-SA',
+            'Polish': 'pl-PL',
+            'Polnisch': 'pl-PL',
+            'Dutch': 'nl-NL',
+            'Niederländisch': 'nl-NL',
+            'Swedish': 'sv-SE',
+            'Schwedisch': 'sv-SE',
+            'Korean': 'ko-KR',
+            'Koreanisch': 'ko-KR'
+        };
+        
+        utterance.lang = langMap[language] || 'en-US';
+        utterance.rate = 0.8;
+        speechSynthesis.speak(utterance);
+    };
+    
+    // Show test side
+    window.showTestSide = function() {
+        document.getElementById('learningSide').style.display = 'none';
+        document.getElementById('testingSide').style.display = 'block';
+    };
+    
+    // Vocabulary speech recognition
+    let vocabRecognition = null;
+    let isVocabListening = false;
+    
+    function setupVocabSpeechRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return;
+        
+        vocabRecognition = new SpeechRecognition();
+        vocabRecognition.lang = 'de-DE'; // Always German - the language being learned
+        vocabRecognition.continuous = false;
+        vocabRecognition.interimResults = true;
+        vocabRecognition.maxAlternatives = 1;
+        
+        vocabRecognition.onstart = () => {
+            isVocabListening = true;
+            document.getElementById('vocabSpeechButton').innerHTML = '<span class="mic-icon">🔴</span> Sprechen beenden';
+            document.getElementById('vocabSpeechButton').classList.add('listening');
+            document.getElementById('vocabListeningIndicator').style.display = 'flex';
+            document.getElementById('vocabTranscribedText').innerHTML = '';
+        };
+        
+        vocabRecognition.onend = () => {
+            isVocabListening = false;
+            document.getElementById('vocabSpeechButton').innerHTML = '<span class="mic-icon">🎤</span> Sprechen beginnen';
+            document.getElementById('vocabSpeechButton').classList.remove('listening');
+            document.getElementById('vocabListeningIndicator').style.display = 'none';
+            
+            // Check the result
+            const finalText = document.getElementById('vocabTranscribedText').textContent.trim();
+            if (finalText) {
+                checkVocabRecall(finalText);
+            }
+        };
+        
+        vocabRecognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript = event.results[i][0].transcript;
+            }
+            console.log('Speech recognition result:', transcript);
+            const transcribedDiv = document.getElementById('vocabTranscribedText');
+            if (transcribedDiv) {
+                transcribedDiv.textContent = transcript;
+            } else {
+                console.error('vocabTranscribedText element not found');
+            }
+        };
+        
+        vocabRecognition.onerror = (event) => {
+            console.error('Vocab speech recognition error:', event.error);
+            stopVocabSpeech();
+        };
+    }
+    
+    window.toggleVocabSpeech = function() {
+        if (!isVocabListening) {
+            startVocabSpeech();
+        } else {
+            stopVocabSpeech();
+        }
+    };
+    
+    function startVocabSpeech() {
+        if (vocabRecognition && !isVocabListening) {
+            vocabRecognition.start();
+        }
+    }
+    
+    function stopVocabSpeech() {
+        if (vocabRecognition && isVocabListening) {
+            vocabRecognition.stop();
+        }
+    }
+    
+    // Check vocabulary recall from speech
+    function checkVocabRecall(spokenText) {
+        const spoken = spokenText.toLowerCase().trim();
+        const correct = window.currentVocabWord.word.toLowerCase();
+        const lemma = window.currentVocabWord.lemma.toLowerCase();
+        const resultDiv = document.getElementById('recallResult');
+        
+        // Check for exact match or close match
+        if (spoken === correct) {
+            resultDiv.innerHTML = '<p class="correct">✅ Perfect! Excellent pronunciation!</p>';
+            resultDiv.className = 'recall-result correct';
+        } else if (spoken === lemma) {
+            resultDiv.innerHTML = `<p class="partial">⚠️ Close! You said the base form. The answer is: <strong>${window.currentVocabWord.word}</strong></p>`;
+            resultDiv.className = 'recall-result partial';
+        } else if (spoken.includes(correct) || correct.includes(spoken)) {
+            resultDiv.innerHTML = `<p class="partial">⚠️ Almost there! You said: "${spokenText}". The answer is: <strong>${window.currentVocabWord.word}</strong></p>`;
+            resultDiv.className = 'recall-result partial';
+        } else {
+            resultDiv.innerHTML = `<p class="incorrect">❌ You said: "${spokenText}". The correct answer is: <strong>${window.currentVocabWord.word}</strong></p>`;
+            resultDiv.className = 'recall-result incorrect';
+        }
+        
+        resultDiv.style.display = 'block';
+        document.querySelector('.difficulty-buttons').style.display = 'block';
+    }
+    
+    // Rate word difficulty
+    window.rateWord = async function(difficulty) {
+        try {
+            const videoId = getVideoId();
+            const response = await fetch('/api/spacy/vocabulary-practice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    videoId: videoId,
+                    word: window.currentVocabWord.word,
+                    lemma: window.currentVocabWord.lemma,
+                    difficulty: difficulty
+                }),
+                credentials: 'same-origin'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                showStats(data);
+            }
+        } catch (error) {
+            console.error('Error saving practice:', error);
+        }
+    };
+    
+    // Show statistics
+    function showStats(data) {
+        document.getElementById('testingSide').style.display = 'none';
+        document.getElementById('statsSide').style.display = 'block';
+        
+        const nextReview = new Date(data.next_review);
+        const statsHtml = `
+            <p>Review count: <strong>${data.review_count}</strong></p>
+            <p>Next review: <strong>${nextReview.toLocaleDateString()}</strong></p>
+            <p>Interval: <strong>${data.interval_days} days</strong></p>
+        `;
+        
+        document.getElementById('wordStats').innerHTML = statsHtml;
+    }
+    
+    // Load word statistics
+    async function loadWordStats(word) {
+        try {
+            const videoId = getVideoId();
+            const response = await fetch(`/api/spacy/vocabulary-stats/${videoId}/${encodeURIComponent(word)}`, {
+                credentials: 'same-origin'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.stats) {
+                    // Show previous stats if available
+                    console.log('Previous stats:', data.stats);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading stats:', error);
+        }
+    }
+    
+    function highlightWord(sentence, word) {
+        const regex = new RegExp(`\\b${word}\\b`, 'gi');
+        return sentence.replace(regex, `<span style="background-color: yellow; font-weight: bold;">${word}</span>`);
+    }
+    
+    // Cloze Tests
+    const startClozeBtn = document.getElementById('startClozeBtn');
+    if (startClozeBtn) {
+        startClozeBtn.addEventListener('click', async () => {
+            const videoId = getVideoId();
+            if (!videoId) return;
+            
+            // Show loading state
+            document.getElementById('clozePlaceholder').style.display = 'none';
+            document.getElementById('clozeLoading').style.display = 'block';
+            startClozeBtn.style.display = 'none';
+            
+            try {
+                const response = await fetch(`/api/spacy/cloze-tests/${videoId}?count=5`, {
+                    credentials: 'same-origin'
+                });
+                
+                if (!response.ok) throw new Error('Failed to load cloze tests');
+                
+                const data = await response.json();
+                
+                if (data.success && data.data && data.data.cloze_tests) {
+                    currentClozeTests = data.data.cloze_tests;
+                    currentClozeIndex = 0;
+                    clozeScore = 0;
+                    clozeAttempts = 0;
+                    displayClozeTest();
+                } else {
+                    throw new Error('No cloze tests available');
+                }
+            } catch (error) {
+                console.error('Error loading cloze tests:', error);
+                document.getElementById('clozeLoading').style.display = 'none';
+                document.getElementById('clozePlaceholder').textContent = 'Error loading cloze tests. Please try again.';
+                document.getElementById('clozePlaceholder').style.display = 'block';
+                startClozeBtn.style.display = 'block';
+            }
+        });
+    }
+    
+    // Display cloze test
+    function displayClozeTest() {
+        if (currentClozeIndex >= currentClozeTests.length) {
+            showClozeResults();
+            return;
+        }
+        
+        document.getElementById('clozeLoading').style.display = 'none';
+        document.getElementById('clozeContent').style.display = 'block';
+        
+        const test = currentClozeTests[currentClozeIndex];
+        document.getElementById('clozeSentence').textContent = test.sentence;
+        document.getElementById('currentQuestion').textContent = currentClozeIndex + 1;
+        document.getElementById('totalQuestions').textContent = currentClozeTests.length;
+        
+        const optionsContainer = document.getElementById('clozeOptions');
+        optionsContainer.innerHTML = '';
+        
+        test.options.forEach(option => {
+            const btn = document.createElement('button');
+            btn.className = 'cloze-option-btn';
+            btn.textContent = option;
+            btn.addEventListener('click', () => checkClozeAnswer(option, test.cloze_word));
+            optionsContainer.appendChild(btn);
+        });
+        
+        document.getElementById('clozeResult').style.display = 'none';
+        document.getElementById('nextClozeBtn').style.display = 'none';
+    }
+    
+    // Check cloze answer
+    function checkClozeAnswer(answer, correctAnswer) {
+        clozeAttempts++;
+        const isCorrect = answer === correctAnswer;
+        if (isCorrect) clozeScore++;
+        
+        // Disable all option buttons
+        document.querySelectorAll('.cloze-option-btn').forEach(btn => {
+            btn.disabled = true;
+            if (btn.textContent === correctAnswer) {
+                btn.classList.add('correct');
+            } else if (btn.textContent === answer && !isCorrect) {
+                btn.classList.add('incorrect');
+            }
+        });
+        
+        // Show result
+        const resultDiv = document.getElementById('clozeResult');
+        resultDiv.textContent = isCorrect ? 'Correct! ✓' : `Incorrect. The answer is: ${correctAnswer}`;
+        resultDiv.className = 'cloze-result ' + (isCorrect ? 'correct' : 'incorrect');
+        resultDiv.style.display = 'block';
+        
+        // Update score
+        document.getElementById('clozeScore').textContent = clozeScore;
+        document.getElementById('clozeAttempts').textContent = clozeAttempts;
+        
+        // Show next button
+        document.getElementById('nextClozeBtn').style.display = 'block';
+    }
+    
+    // Next cloze test
+    document.getElementById('nextClozeBtn')?.addEventListener('click', () => {
+        currentClozeIndex++;
+        displayClozeTest();
+    });
+    
+    // Show final results
+    function showClozeResults() {
+        const clozeContent = document.getElementById('clozeContent');
+        const percentage = Math.round((clozeScore / clozeAttempts) * 100);
+        
+        clozeContent.innerHTML = `
+            <div class="cloze-final-results">
+                <h3>Test Complete!</h3>
+                <p>Your score: ${clozeScore} out of ${currentClozeTests.length}</p>
+                <p>Accuracy: ${percentage}%</p>
+                <button class="btn btn-primary" onclick="location.reload()">Try Again</button>
+            </div>
+        `;
+    }
+    
+    // Card-based dictation functionality
+    let cardRecognition = null;
+    let isCardListening = false;
+    let currentCardIndex = null;
+    
+    // Toggle dictation for vocabulary card
+    window.toggleCardDictation = function(index) {
+        if (currentCardIndex !== null && currentCardIndex !== index) {
+            // Stop any other active dictation
+            stopCardDictation(currentCardIndex);
+        }
+        
+        currentCardIndex = index;
+        const dictateBtn = document.querySelector(`#dictation-${index} .dictate-btn`);
+        
+        if (!isCardListening) {
+            startCardDictation(index);
+        } else {
+            stopCardDictation(index);
+        }
+    };
+    
+    // Start dictation for card
+    function startCardDictation(index) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert('Speech recognition is not supported in your browser.');
+            return;
+        }
+        
+        console.log('Starting dictation for card index:', index);
+        
+        // Check if microphone permission is granted
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                console.log('Microphone access granted');
+                stream.getTracks().forEach(track => track.stop()); // Stop the test stream
+                
+                cardRecognition = new SpeechRecognition();
+                cardRecognition.lang = 'de-DE'; // German language
+                cardRecognition.continuous = false; // Single word mode
+                cardRecognition.interimResults = true;
+                cardRecognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
+                
+                const dictateBtn = document.querySelector(`#dictation-${index} .dictate-btn`);
+                const resultDiv = document.getElementById(`result-${index}`);
+                
+                if (!resultDiv) {
+                    console.error('Result div not found for index:', index);
+                    return;
+                }
+                
+                setupCardRecognitionHandlers(index, dictateBtn, resultDiv);
+                
+                // Start recognition
+                try {
+                    cardRecognition.start();
+                    console.log('Speech recognition started');
+                } catch (err) {
+                    console.error('Failed to start speech recognition:', err);
+                    alert('Failed to start speech recognition. Please try again.');
+                }
+            })
+            .catch(err => {
+                console.error('Microphone access denied:', err);
+                alert('Microphone access is required for dictation. Please allow microphone access and try again.');
+            });
+    }
+    
+    function setupCardRecognitionHandlers(index, dictateBtn, resultDiv) {
+        
+        cardRecognition.onstart = () => {
+            console.log('Dictation started');
+            isCardListening = true;
+            dictateBtn.innerHTML = '<span class="mic-icon">🔴</span> Stop Dictation';
+            dictateBtn.classList.add('listening');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<p style="color: #999; font-style: italic;">Listening...</p>';
+            resultDiv.dataset.finalText = ''; // Clear previous results
+        };
+        
+        cardRecognition.onend = () => {
+            console.log('Dictation ended');
+            isCardListening = false;
+            dictateBtn.innerHTML = '<span class="mic-icon">🎤</span> Start Dictation';
+            dictateBtn.classList.remove('listening');
+            
+            // Get the final text from the stored data
+            const finalText = (resultDiv.dataset.finalText || '').trim();
+            
+            console.log('Final text:', finalText);
+            
+            if (finalText && finalText !== '') {
+                const germanWord = window.currentVocabulary[index].original_word;
+                const lemma = window.currentVocabulary[index].lemma;
+                
+                // Check if the spoken word matches
+                const isCorrect = finalText.toLowerCase() === germanWord.toLowerCase() || 
+                                finalText.toLowerCase() === lemma.toLowerCase();
+                
+                resultDiv.innerHTML = `
+                    <div class="dictation-feedback">
+                        <p><strong>You said:</strong> "${finalText}"</p>
+                        <p><strong>German word:</strong> "${germanWord}"</p>
+                        ${isCorrect ? '<p style="color: green;">✓ Correct!</p>' : '<p style="color: orange;">Keep practicing!</p>'}
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+                
+                // Show rating buttons
+                document.getElementById(`rating-${index}`).style.display = 'block';
+            } else {
+                resultDiv.innerHTML = '<p style="color: #999;">No speech detected. Try speaking louder or check your microphone.</p>';
+            }
+        };
+        
+        cardRecognition.onresult = (event) => {
+            console.log('Speech recognition result event:', event);
+            let finalTranscript = '';
+            let interimTranscript = '';
+            
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const result = event.results[i];
+                if (result.isFinal) {
+                    finalTranscript += result[0].transcript + ' ';
+                } else {
+                    interimTranscript += result[0].transcript;
+                }
+            }
+            
+            // Store final text for later use
+            if (finalTranscript) {
+                resultDiv.dataset.finalText = (resultDiv.dataset.finalText || '') + finalTranscript;
+            }
+            
+            const displayText = (resultDiv.dataset.finalText || '') + interimTranscript;
+            console.log('Display text:', displayText, 'Final:', finalTranscript);
+            
+            // Show the result div immediately with results
+            resultDiv.style.display = 'block';
+            if (displayText.trim()) {
+                resultDiv.innerHTML = `<p style="color: #333;">"${displayText.trim()}"</p>`;
+            }
+            
+            // Auto-stop after detecting a word (for vocabulary practice)
+            if (displayText.trim()) {
+                // Extract just the first word
+                const firstWord = displayText.trim().split(/\s+/)[0];
+                console.log('Detected word:', firstWord);
+                
+                // Check if we have a complete word (at least 2 characters)
+                if (firstWord.length >= 2) {
+                    // Wait a short moment to catch any final adjustments
+                    setTimeout(() => {
+                        if (isCardListening && cardRecognition) {
+                            console.log('Auto-stopping after word detection');
+                            cardRecognition.stop();
+                        }
+                    }, 500); // 500ms delay to ensure we catch the final result
+                }
+            }
+        };
+        
+        cardRecognition.onerror = (event) => {
+            console.error('Card speech recognition error:', event.error);
+            isCardListening = false;
+            
+            if (event.error === 'no-speech') {
+                resultDiv.innerHTML = '<p style="color: #ff6b6b;">No speech detected. Please speak clearly into your microphone.</p>';
+            } else if (event.error === 'not-allowed') {
+                resultDiv.innerHTML = '<p style="color: #ff6b6b;">Microphone access denied. Please allow microphone access in your browser settings.</p>';
+            } else if (event.error === 'network') {
+                resultDiv.innerHTML = '<p style="color: #ff6b6b;">Network error. Please check your internet connection.</p>';
+            } else {
+                resultDiv.innerHTML = `<p style="color: #ff6b6b;">Error: ${event.error}. Please try again.</p>`;
+            }
+            
+            dictateBtn.innerHTML = '<span class="mic-icon">🎤</span> Start Dictation';
+            dictateBtn.classList.remove('listening');
+        };
+        
+        cardRecognition.onspeechstart = () => {
+            console.log('Speech detected!');
+            // Don't overwrite the result div, just log it
+        };
+        
+        cardRecognition.onspeechend = () => {
+            console.log('Speech ended');
+        };
+        
+        cardRecognition.onaudiostart = () => {
+            console.log('Audio capture started');
+        };
+        
+        cardRecognition.onaudioend = () => {
+            console.log('Audio capture ended');
+        };
+    }
+    
+    // Stop dictation for card
+    function stopCardDictation(index) {
+        if (cardRecognition && isCardListening) {
+            cardRecognition.stop();
+        }
+    }
+    
+    // Rate word directly from card
+    window.rateWordDirect = async function(index, difficulty) {
+        const word = window.currentVocabulary[index];
+        const videoId = getVideoId();
+        
+        try {
+            const response = await fetch('/api/spacy/vocabulary-practice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    videoId: videoId,
+                    word: word.original_word,
+                    lemma: word.lemma || word.original_word,
+                    difficulty: difficulty
+                }),
+                credentials: 'same-origin'
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Show feedback
+                const ratingButtons = document.getElementById(`rating-${index}`);
+                const feedback = document.createElement('div');
+                feedback.className = 'rating-feedback';
+                feedback.innerHTML = `
+                    <p class="success">✓ Rating saved!</p>
+                    <p>Next review: ${new Date(data.next_review).toLocaleDateString()}</p>
+                `;
+                ratingButtons.appendChild(feedback);
+                
+                // Hide rating buttons after feedback
+                setTimeout(() => {
+                    ratingButtons.style.display = 'none';
+                    // Collapse the dictation area
+                    document.getElementById(`dictation-${index}`).style.display = 'none';
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Error saving rating:', error);
+        }
+    };
     
     // Prevent right-click on learning content
     document.addEventListener('contextmenu', (e) => {

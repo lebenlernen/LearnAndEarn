@@ -74,6 +74,10 @@ app.use('/api/admin', adminRoutes);
 const vocabularyRoutes = require('./routes/vocabulary');
 app.use('/api/vocabulary', vocabularyRoutes);
 
+// Import SpaCy routes
+const spacyRoutes = require('./routes/spacy');
+app.use('/api/spacy', spacyRoutes);
+
 // Import auth middleware
 const { optionalAuth, isAuthenticated, isAdmin } = require('./middleware/auth');
 
