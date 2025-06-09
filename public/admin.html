@@ -189,13 +189,20 @@
 <body>
     <div class="container">
         <div class="user-header" id="userHeader" style="display: none;">
-            <div class="user-info">
-                <span class="user-name" id="userName"></span>
-                <span class="user-role" id="userRole"></span>
+            <div class="nav-links">
+                <a href="/home.html" class="nav-link">Home</a>
+                <a href="/search.html" class="nav-link">Video Search</a>
+                <a href="/progress.html" class="nav-link">My Progress</a>
             </div>
-            <div class="user-actions">
-                <a href="/">Home</a>
-                <button class="logout-button" onclick="logout()">Logout</button>
+            <div class="user-menu">
+                <div class="user-info">
+                    <span>Welcome, <span class="user-name" id="userName"></span></span>
+                    <span class="user-role" id="userRole"></span>
+                </div>
+                <div class="user-actions">
+                    <a href="/profile.html">My Profile</a>
+                    <button class="logout-button" onclick="logout()">Logout</button>
+                </div>
             </div>
         </div>
         

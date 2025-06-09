@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (authData.user.role === 'admin') {
                 document.getElementById('userRole').classList.add('admin');
-                document.getElementById('adminLink').style.display = 'block';
+                document.getElementById('adminLink').style.display = 'inline-block';
             }
         }
     }

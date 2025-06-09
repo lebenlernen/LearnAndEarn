@@ -1,16 +1,16 @@
 {
-  "name": "yellow_pages",
+  "name": "learnandearn",
   "version": "1.0.0",
-  "description": "This file is for outlining the requirements and features of the LearnAndEarn project.  we are migrating an odoo project for language learners to node.js This is the yaml file for the postgres server /Users/thomassee/Docker/containers/mark_learnandearn/docker-compose.yml we go on using the tables. The used tables like our_videos begin typically with \"our_\"",
-  "main": "index.js",
+  "description": "LearnAndEarn - A platform for learning German through YouTube videos with AI-powered features including speech recognition, progress tracking, and interactive exercises",
+  "main": "app.js",
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["german", "language-learning", "youtube", "education", "speech-recognition"],
+  "author": "Thomas Seewald",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "bcrypt": "^6.0.0",

@@ -187,6 +187,36 @@
     margin-bottom: 20px;
 }
 
+.nav-links {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.nav-link:hover {
+    background-color: #e9ecef;
+}
+
+.nav-link.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
 .user-info {
     display: flex;
     align-items: center;
@@ -234,6 +264,10 @@
     background-color: #0056b3;
 }
 
+.user-actions a.active {
+    background-color: #28a745;
+}
+
 .logout-button {
     background-color: #6c757d;
     color: white;
@@ -242,6 +276,24 @@
 
 .logout-button:hover {
     background-color: #5a6268;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .user-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .nav-links {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .user-menu {
+        width: 100%;
+        justify-content: space-between;
+    }
 }
 
 /* Role selection styles */

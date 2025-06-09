@@ -34,6 +34,11 @@ const loadUserProfile = (user) => {
         return `<span class="user-role ${roleClass}">${role}</span>`;
     }).join(' ');
     
+    // Show admin section if user is admin
+    if (roles.includes('admin')) {
+        document.getElementById('adminSection').style.display = 'block';
+    }
+    
     // Set form values
     if (user.country) {
         document.getElementById('country').value = user.country;

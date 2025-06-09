@@ -143,7 +143,7 @@ async function updateAuthUI() {
                 roleElement.classList.add('admin');
                 const adminLink = document.getElementById('adminLink');
                 if (adminLink) {
-                    adminLink.style.display = 'block';
+                    adminLink.style.display = 'inline-block';
                 }
             }
         }

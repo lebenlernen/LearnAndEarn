@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     if (authData.user.role === 'admin') {
         document.getElementById('userRole').classList.add('admin');
-        document.getElementById('adminLink').style.display = 'block';
+                        document.getElementById('adminLink').style.display = 'inline-block';
     }
     
     // Show progress content

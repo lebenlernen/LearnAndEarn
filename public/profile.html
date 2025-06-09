@@ -92,15 +92,20 @@
 </head>
 <body>
     <div id="userHeader" class="user-header" style="display: none;">
-        <div class="user-info">
-            <span>Willkommen, <span class="user-name" id="userName"></span></span>
-            <span class="user-role" id="userRole"></span>
+        <div class="nav-links">
+            <a href="/home.html" class="nav-link">Home</a>
+            <a href="/search.html" class="nav-link">Video Search</a>
+            <a href="/progress.html" class="nav-link">My Progress</a>
         </div>
-        <div class="user-actions">
-            <a href="/progress.html">Mein Fortschritt</a>
-            <a href="/">Videos</a>
-            <a href="/admin" id="adminLink" style="display: none;">Admin Panel</a>
-            <button class="logout-button" onclick="logout()">Logout</button>
+        <div class="user-menu">
+            <div class="user-info">
+                <span>Welcome, <span class="user-name" id="userName"></span></span>
+                <span class="user-role" id="userRole"></span>
+            </div>
+            <div class="user-actions">
+                <a href="/profile.html" class="active">My Profile</a>
+                <button class="logout-button" onclick="logout()">Logout</button>
+            </div>
         </div>
     </div>
     
@@ -183,6 +188,11 @@
                 
                 <button type="submit" class="btn-save">Profil speichern</button>
             </form>
+            
+            <div id="adminSection" style="display: none; margin-top: 30px;">
+                <h3>Admin Functions</h3>
+                <a href="/admin.html" class="admin-button" style="display: inline-block; background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-size: 16px;">Go to Admin Panel</a>
+            </div>
         </div>
     </div>
     

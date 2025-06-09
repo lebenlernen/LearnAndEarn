@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Check if user has admin role
             if (roles.includes('admin')) {
                 roleElement.classList.add('admin');
-                document.getElementById('adminLink').style.display = 'block';
+                document.getElementById('adminLink').style.display = 'inline-block';
             }
         } else {
             userHeader.style.display = 'none';
