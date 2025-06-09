@@ -4,6 +4,8 @@
   "description": "This file is for outlining the requirements and features of the LearnAndEarn project.  we are migrating an odoo project for language learners to node.js This is the yaml file for the postgres server /Users/thomassee/Docker/containers/mark_learnandearn/docker-compose.yml we go on using the tables. The used tables like our_videos begin typically with \"our_\"",
   "main": "index.js",
   "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
