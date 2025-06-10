@@ -129,18 +129,31 @@
                     <p class="loading-detail">Analyzing German text with NLP model...</p>
                 </div>
                 <div id="vocabContent" style="display: none;">
-                    <div class="vocab-stats">
-                        <div class="stat-item">
-                            <span class="stat-label">Total Words:</span>
-                            <span id="totalWords" class="stat-value">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Unique Words:</span>
-                            <span id="uniqueWords" class="stat-value">0</span>
+                    <div class="vocab-controls">
+                        <select id="practiceMode" class="practice-mode-selector">
+                            <option value="einzelwort">Einzelwort</option>
+                            <option value="satzauswahl">Satzauswahl</option>
+                            <option value="wortauswahl">Wortauswahl</option>
+                        </select>
+                        <div class="vocab-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Total Words:</span>
+                                <span id="totalWords" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Unique Words:</span>
+                                <span id="uniqueWords" class="stat-value">0</span>
+                            </div>
                         </div>
                     </div>
                     <div class="vocab-grid" id="vocabGrid">
                         <!-- Vocabulary items will be inserted here -->
+                    </div>
+                    <div id="sentencesList" class="sentences-list" style="display: none;">
+                        <!-- Sentences will be loaded here -->
+                    </div>
+                    <div id="wordSelectionList" class="word-selection-list" style="display: none;">
+                        <!-- Word selection interface will be here -->
                     </div>
                 </div>
                 <div id="vocabPlaceholder" class="placeholder-text">

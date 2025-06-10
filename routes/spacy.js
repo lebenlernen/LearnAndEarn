@@ -13,6 +13,162 @@ router.use((req, res, next) => {
     next();
 });
 
+// Get sentences for a video
+router.get('/sentences/:videoId', isAuthenticated, async (req, res) => {
+    try {
+        const { videoId } = req.params;
+        const userId = req.user.id;
+        
+        // Get user's mother language
+        const userQuery = `
+            SELECT mother_language 
+            FROM our_users 
+            WHERE id = $1
+        `;
+        const userResult = await req.db.query(userQuery, [userId]);
+        const motherLanguage = userResult.rows[0]?.mother_language || 'English';
+        const normalizedLanguage = googleTranslate.normalizeLanguage(motherLanguage);
+        
+        // Get YouTube video_id
+        const videoQuery = `
+            SELECT video_id, pure_subtitle 
+            FROM our_videos 
+            WHERE id = $1
+        `;
+        const videoResult = await req.db.query(videoQuery, [videoId]);
+        
+        if (videoResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Video not found'
+            });
+        }
+        
+        const youtubeVideoId = videoResult.rows[0].video_id;
+        const subtitles = videoResult.rows[0].pure_subtitle;
+        
+        // Check if we already have sentences for this video
+        const sentencesQuery = `
+            SELECT s.*, t.translation 
+            FROM our_video_sentences s
+            LEFT JOIN our_sentence_translations t 
+                ON s.id = t.sentence_id AND t.language = $2
+            WHERE s.video_id = $1
+            ORDER BY s.id
+        `;
+        let sentences = await req.db.query(sentencesQuery, [youtubeVideoId, normalizedLanguage]);
+        
+        if (sentences.rows.length === 0 && subtitles) {
+            // Extract sentences from subtitles using SpaCy
+            console.log('Extracting sentences for video:', youtubeVideoId);
+            
+            try {
+                // Simple sentence extraction as fallback
+                let sentencesArray = [];
+                
+                // Try SpaCy first
+                try {
+                    const response = await axios.post(
+                        `${SPACY_API_URL}/extract_sentences`,
+                        {
+                            text: subtitles,
+                            video_id: youtubeVideoId
+                        }
+                    );
+                    
+                    if (response.data && response.data.sentences) {
+                        sentencesArray = response.data.sentences;
+                    }
+                } catch (spacyError) {
+                    console.log('SpaCy not available, using simple extraction');
+                    // Fallback: Simple sentence splitting
+                    sentencesArray = subtitles
+                        .split(/[.!?]+/)
+                        .map(s => s.trim())
+                        .filter(s => s.length > 10 && /[a-zA-ZäöüÄÖÜß]/.test(s))
+                        .map(s => s.charAt(0).toUpperCase() + s.slice(1));
+                }
+                
+                if (sentencesArray.length > 0) {
+                    console.log(`Storing ${sentencesArray.length} sentences for video ${youtubeVideoId}`);
+                    // Store sentences in database
+                    for (let i = 0; i < sentencesArray.length; i++) {
+                        const sentence = sentencesArray[i];
+                        const wordCount = sentence.split(/\s+/).length;
+                        
+                        // First check if sentence already exists
+                        const existingCheck = await req.db.query(
+                            `SELECT id FROM our_video_sentences 
+                             WHERE video_id = $1 AND sentence = $2`,
+                            [youtubeVideoId, sentence]
+                        );
+                        
+                        let sentenceId;
+                        if (existingCheck.rows.length > 0) {
+                            sentenceId = existingCheck.rows[0].id;
+                        } else {
+                            const insertResult = await req.db.query(
+                                `INSERT INTO our_video_sentences 
+                                 (video_id, sentence)
+                                 VALUES ($1, $2)
+                                 RETURNING id`,
+                                [youtubeVideoId, sentence]
+                            );
+                            sentenceId = insertResult.rows[0].id;
+                        }
+                        
+                        if (sentenceId && normalizedLanguage !== 'German') {
+                            
+                            // Translate sentence
+                            try {
+                                const translation = await googleTranslate.translateText(
+                                    sentence, 
+                                    normalizedLanguage, 
+                                    'German'
+                                );
+                                
+                                if (translation) {
+                                    await req.db.query(
+                                        `INSERT INTO our_sentence_translations 
+                                         (sentence_id, language, translation)
+                                         VALUES ($1, $2, $3)
+                                         ON CONFLICT (sentence_id, language) DO NOTHING`,
+                                        [sentenceId, normalizedLanguage, translation]
+                                    );
+                                }
+                            } catch (err) {
+                                console.error('Failed to translate sentence:', err);
+                            }
+                        }
+                    }
+                    
+                    // Fetch the stored sentences with translations
+                    sentences = await req.db.query(sentencesQuery, [youtubeVideoId, normalizedLanguage]);
+                }
+            } catch (err) {
+                console.error('Failed to extract sentences:', err);
+            }
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                sentences: sentences.rows,
+                count: sentences.rows.length,
+                mother_language: normalizedLanguage
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error fetching sentences:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch sentences',
+            details: error.message
+        });
+    }
+});
+
 
 // Process video subtitles with SpaCy
 router.post('/process-video', isAuthenticated, async (req, res) => {
@@ -514,6 +670,40 @@ router.get('/vocabulary-due', isAuthenticated, async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to fetch due words'
+        });
+    }
+});
+
+// Get sentences containing a specific word from all videos
+router.get('/sentences-by-word/:word', isAuthenticated, async (req, res) => {
+    try {
+        const { word } = req.params;
+        const { limit = 3 } = req.query;
+        
+        // Search for sentences containing this word across all videos
+        const query = `
+            SELECT s.sentence, v.title as video_title, v.video_id
+            FROM our_video_sentences s
+            JOIN our_videos v ON s.video_id = v.video_id
+            WHERE LOWER(s.sentence) LIKE LOWER($1)
+            GROUP BY s.sentence, v.title, v.video_id
+            ORDER BY RANDOM()
+            LIMIT $2
+        `;
+        
+        const searchPattern = `%${word}%`;
+        const result = await req.db.query(query, [searchPattern, limit]);
+        
+        res.json({
+            success: true,
+            sentences: result.rows
+        });
+        
+    } catch (error) {
+        console.error('Error fetching sentences by word:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch sentences'
         });
     }
 });

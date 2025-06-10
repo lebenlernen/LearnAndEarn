@@ -170,6 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selection = window.getSelection();
                 const selectedText = selection.toString().trim();
                 
+                console.log('Text selected:', selectedText);
+                
                 if (selectedText && selectedText.length > 0) {
                     currentSelectedText = selectedText;
                     // Highlight the selection
@@ -338,20 +340,22 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (playButton) {
             // Remove old listener and add new one
-            playButton.replaceWith(playButton.cloneNode(true));
-            const newPlayButton = document.getElementById('playButton');
+            const newPlayButton = playButton.cloneNode(true);
+            playButton.parentNode.replaceChild(newPlayButton, playButton);
             newPlayButton.addEventListener('click', () => {
                 const textToPlay = currentSelectedText || currentFullSentence;
+                console.log('Playing text:', textToPlay);
                 speakText(textToPlay, 1.0);
             });
         }
         
         if (slowPlayButton) {
             // Remove old listener and add new one
-            slowPlayButton.replaceWith(slowPlayButton.cloneNode(true));
-            const newSlowPlayButton = document.getElementById('slowPlayButton');
+            const newSlowPlayButton = slowPlayButton.cloneNode(true);
+            slowPlayButton.parentNode.replaceChild(newSlowPlayButton, slowPlayButton);
             newSlowPlayButton.addEventListener('click', () => {
                 const textToPlay = currentSelectedText || currentFullSentence;
+                console.log('Playing text slowly:', textToPlay);
                 speakText(textToPlay, 0.6);
             });
         }
@@ -823,16 +827,28 @@ document.addEventListener('DOMContentLoaded', () => {
             loadVocabBtn.style.display = 'none';
             
             try {
-                const response = await fetch(`/api/spacy/vocabulary/${videoId}`, {
-                    credentials: 'same-origin'
-                });
+                // Load both vocabulary and sentences
+                const [vocabResponse, sentencesResponse] = await Promise.all([
+                    fetch(`/api/spacy/vocabulary/${videoId}`, { credentials: 'same-origin' }),
+                    fetch(`/api/spacy/sentences/${videoId}`, { credentials: 'same-origin' })
+                ]);
                 
-                if (!response.ok) throw new Error('Failed to load vocabulary');
+                if (!vocabResponse.ok) throw new Error('Failed to load vocabulary');
                 
-                const data = await response.json();
+                const vocabData = await vocabResponse.json();
+                const sentencesData = await sentencesResponse.json();
                 
-                if (data.success && data.data) {
-                    displayVocabulary(data.data);
+                if (vocabData.success && vocabData.data) {
+                    displayVocabulary(vocabData.data);
+                    
+                    // Store sentences globally
+                    if (sentencesData.success && sentencesData.data) {
+                        window.videoSentences = sentencesData.data.sentences;
+                        console.log(`Loaded ${window.videoSentences.length} sentences`);
+                    }
+                    
+                    // Setup mode selector
+                    setupPracticeModeSelector();
                 } else {
                     throw new Error('No vocabulary data available');
                 }
@@ -845,6 +861,457 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // Setup practice mode selector
+    function setupPracticeModeSelector() {
+        const modeSelector = document.getElementById('practiceMode');
+        if (!modeSelector) return;
+        
+        // Store current mode globally
+        window.currentPracticeMode = 'einzelwort';
+        
+        modeSelector.addEventListener('change', (e) => {
+            const mode = e.target.value;
+            window.currentPracticeMode = mode;
+            
+            // Always keep vocab grid visible
+            document.getElementById('vocabGrid').style.display = 'grid';
+            
+            // Hide secondary views
+            document.getElementById('sentencesList').style.display = 'none';
+            document.getElementById('wordSelectionList').style.display = 'none';
+            
+            // Update vocab cards behavior based on mode
+            updateVocabCardsBehavior(mode);
+            
+            switch(mode) {
+                case 'einzelwort':
+                    // Just vocabulary cards with normal dictation
+                    break;
+                    
+                case 'satzauswahl':
+                    // Vocabulary cards will show sentences on click
+                    break;
+                    
+                case 'wortauswahl':
+                    displayWordSelection();
+                    document.getElementById('wordSelectionList').style.display = 'block';
+                    break;
+            }
+        });
+    }
+    
+    // Update vocabulary cards behavior based on mode
+    function updateVocabCardsBehavior(mode) {
+        const vocabCards = document.querySelectorAll('.vocab-card');
+        vocabCards.forEach(card => {
+            const translationDiv = card.querySelector('.word-main-translation');
+            if (translationDiv) {
+                // Remove old event listeners by cloning
+                const newTranslationDiv = translationDiv.cloneNode(true);
+                translationDiv.parentNode.replaceChild(newTranslationDiv, translationDiv);
+                
+                // Add new event listener based on mode
+                if (mode === 'satzauswahl') {
+                    newTranslationDiv.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const wordIndex = parseInt(card.dataset.wordIndex);
+                        const germanWord = card.dataset.germanWord;
+                        showSentencesForWord(germanWord, wordIndex);
+                    });
+                } else {
+                    // Default behavior for einzelwort
+                    newTranslationDiv.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const wordIndex = parseInt(card.dataset.wordIndex);
+                        toggleDefaultDictation(card, wordIndex);
+                    });
+                }
+            }
+        });
+    }
+    
+    // Show sentences containing a specific word
+    async function showSentencesForWord(germanWord, wordIndex) {
+        if (!window.videoSentences || window.videoSentences.length === 0) {
+            alert('No sentences available for this video.');
+            return;
+        }
+        
+        // Find sentences containing this word (case-insensitive)
+        const wordLower = germanWord.toLowerCase();
+        let matchingSentences = window.videoSentences.filter(s => 
+            s.sentence.toLowerCase().includes(wordLower)
+        );
+        
+        let sentencesToShow = [];
+        let fromOtherVideos = false;
+        
+        if (matchingSentences.length >= 3) {
+            // We have enough sentences from this video
+            sentencesToShow = matchingSentences.slice(0, 3);
+        } else {
+            // Add what we have from this video
+            sentencesToShow = [...matchingSentences];
+            
+            // Fetch additional sentences from other videos
+            const needed = 3 - sentencesToShow.length;
+            if (needed > 0) {
+                try {
+                    const response = await fetch(`/api/spacy/sentences-by-word/${encodeURIComponent(germanWord)}?limit=${needed}`, {
+                        credentials: 'same-origin'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.sentences) {
+                            fromOtherVideos = true;
+                            // Add sentences from other videos
+                            data.sentences.forEach(sent => {
+                                sentencesToShow.push({
+                                    sentence: sent.sentence,
+                                    fromOtherVideo: true,
+                                    videoTitle: sent.video_title
+                                });
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching sentences from other videos:', error);
+                }
+            }
+        }
+        
+        if (sentencesToShow.length === 0) {
+            alert(`No sentences found containing "${germanWord}"`);
+            return;
+        }
+        
+        // Get translation from vocabulary
+        const wordData = window.currentVocabulary[wordIndex];
+        const translation = wordData.translation || germanWord;
+        
+        // Create a modal to show sentences
+        const modal = document.createElement('div');
+        modal.className = 'sentences-modal';
+        modal.dataset.targetWord = germanWord;
+        modal.innerHTML = `
+            <div class="sentences-modal-content">
+                <span class="close-modal" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <h2>Find the German Word</h2>
+                <div class="word-search-header">
+                    <div class="search-word-display">${translation}</div>
+                    <p class="search-instruction">Click on the correct German word in the sentences below:</p>
+                    ${fromOtherVideos ? '<p class="other-videos-note">von anderen Videos</p>' : ''}
+                </div>
+                <div class="word-sentences-list">
+                    ${sentencesToShow.map((sent, idx) => `
+                        <div class="word-sentence-item ${sent.fromOtherVideo ? 'from-other-video' : ''}">
+                            <div class="sentence-number">${idx + 1}.</div>
+                            <div class="sentence-content">
+                                <div class="sentence-controls">
+                                    <button class="mini-play-btn" data-sentence-idx="${idx}" title="Play sentence">
+                                        ▶
+                                    </button>
+                                    <button class="mini-play-slow-btn" data-sentence-idx="${idx}" title="Play slowly">
+                                        ▶️
+                                    </button>
+                                </div>
+                                <div class="sentence-clickable" data-sentence-index="${sent.fromOtherVideo ? -1 : window.videoSentences.indexOf(sent)}" data-is-other-video="${sent.fromOtherVideo || false}">
+                                    ${makeWordsClickable(sent.sentence, germanWord)}
+                                </div>
+                                ${sent.fromOtherVideo && sent.videoTitle ? `<div class="video-source">From: ${sent.videoTitle}</div>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Store sentences for audio playback
+        modal.sentencesData = sentencesToShow;
+        
+        // Add play button handlers
+        modal.querySelectorAll('.mini-play-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.target.dataset.sentenceIdx);
+                const sentence = sentencesToShow[idx].sentence;
+                speakText(sentence, 1.0);
+            });
+        });
+        
+        modal.querySelectorAll('.mini-play-slow-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.target.dataset.sentenceIdx);
+                const sentence = sentencesToShow[idx].sentence;
+                speakText(sentence, 0.6);
+            });
+        });
+        
+        // Add click handlers to all words
+        modal.querySelectorAll('.clickable-word').forEach(wordSpan => {
+            wordSpan.addEventListener('click', (e) => {
+                const clickedWord = e.target.dataset.word;
+                const sentenceContainer = e.target.closest('.sentence-clickable');
+                const sentenceIndex = parseInt(sentenceContainer.dataset.sentenceIndex);
+                const isOtherVideo = sentenceContainer.dataset.isOtherVideo === 'true';
+                
+                if (clickedWord.toLowerCase() === germanWord.toLowerCase()) {
+                    // Correct word clicked
+                    modal.remove();
+                    if (!isOtherVideo && sentenceIndex >= 0) {
+                        // Practice with sentence from current video
+                        practiceSentenceFromWord(sentenceIndex, germanWord);
+                    } else {
+                        // For sentences from other videos, show success feedback but also allow practice
+                        showSuccessMessage(germanWord, translation);
+                        // Still open practice modal with the sentence
+                        const sentenceText = e.target.closest('.sentence-clickable').textContent.trim();
+                        openDictationModalForOtherVideo(sentenceText, germanWord);
+                    }
+                } else {
+                    // Wrong word clicked - mark it orange
+                    e.target.classList.add('wrong-selection');
+                    setTimeout(() => {
+                        e.target.classList.remove('wrong-selection');
+                    }, 1000);
+                }
+            });
+        });
+    }
+    
+    // Make words clickable in sentence
+    function makeWordsClickable(sentence, targetWord) {
+        // Split sentence into words while preserving punctuation
+        const words = sentence.split(/(\s+|[.,!?;:'"„"]+)/);
+        
+        return words.map(word => {
+            // Skip empty strings and whitespace
+            if (!word || /^\s+$/.test(word)) {
+                return word;
+            }
+            
+            // Skip punctuation
+            if (/^[.,!?;:'"„"]+$/.test(word)) {
+                return word;
+            }
+            
+            // Make word clickable
+            const cleanWord = word.replace(/[.,!?;:'"„"]/g, '');
+            return `<span class="clickable-word" data-word="${cleanWord}">${word}</span>`;
+        }).join('');
+    }
+    
+    // Highlight word in sentence
+    function highlightWordInSentence(sentence, word) {
+        const regex = new RegExp(`\\b${word}\\b`, 'gi');
+        return sentence.replace(regex, `<span class="highlighted-word">${word}</span>`);
+    }
+    
+    // Show success message for correct word selection
+    function showSuccessMessage(germanWord, translation) {
+        const modal = document.createElement('div');
+        modal.className = 'success-modal';
+        modal.innerHTML = `
+            <div class="success-modal-content">
+                <div class="success-icon">✅</div>
+                <h3>Correct!</h3>
+                <p><strong>${translation}</strong> = <strong>${germanWord}</strong></p>
+                <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">Continue</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+            modal.remove();
+        }, 3000);
+    }
+    
+    // Open dictation modal for sentences from other videos
+    function openDictationModalForOtherVideo(sentenceText, focusWord) {
+        const modal = document.getElementById('dictationModal');
+        const sentenceDisplay = document.getElementById('sentenceDisplay');
+        
+        // Use the existing dictation modal
+        currentFullSentence = sentenceText;
+        currentSelectedText = '';
+        currentVideoId = null; // No video ID for external sentences
+        currentSentenceIndex = null;
+        practiceStartTime = Date.now();
+        
+        // Highlight the focus word in the sentence
+        sentenceDisplay.innerHTML = highlightWordInSentence(sentenceText, focusWord);
+        sentenceDisplay.classList.remove('has-selection');
+        
+        modal.style.display = 'block';
+    }
+    
+    // Practice sentence from word context
+    window.practiceSentenceFromWord = function(sentenceIndex, focusWord) {
+        if (!window.videoSentences || !window.videoSentences[sentenceIndex]) return;
+        
+        const sentence = window.videoSentences[sentenceIndex];
+        const modal = document.getElementById('dictationModal');
+        const sentenceDisplay = document.getElementById('sentenceDisplay');
+        
+        // Use the existing dictation modal
+        currentFullSentence = sentence.sentence;
+        currentSelectedText = '';
+        currentVideoId = getVideoId();
+        currentSentenceIndex = sentenceIndex;
+        practiceStartTime = Date.now();
+        
+        // Highlight the focus word in the sentence
+        sentenceDisplay.innerHTML = highlightWordInSentence(sentence.sentence, focusWord);
+        sentenceDisplay.classList.remove('has-selection');
+        
+        // Close the sentences modal
+        document.querySelector('.sentences-modal')?.remove();
+        
+        modal.style.display = 'block';
+    };
+    
+    // Default dictation toggle (extracted from original card click)
+    function toggleDefaultDictation(card, index) {
+        const dictationArea = card.querySelector('.word-dictation-area');
+        const isExpanded = dictationArea.style.display !== 'none';
+        
+        // Collapse all other cards
+        document.querySelectorAll('.vocab-card .word-dictation-area').forEach(area => {
+            area.style.display = 'none';
+        });
+        
+        // Stop any active dictation
+        if (currentCardIndex !== null && currentCardIndex !== index) {
+            stopCardDictation(currentCardIndex);
+        }
+        
+        if (!isExpanded) {
+            // Show dictation area
+            dictationArea.style.display = 'block';
+            
+            // Automatically start dictation
+            setTimeout(() => {
+                toggleCardDictation(index);
+            }, 100);
+        } else {
+            // Hide dictation area
+            dictationArea.style.display = 'none';
+        }
+    }
+    
+    // Display sentences for Satzauswahl mode
+    function displaySentences() {
+        const sentencesList = document.getElementById('sentencesList');
+        if (!window.videoSentences || window.videoSentences.length === 0) {
+            sentencesList.innerHTML = '<p>No sentences available for this video.</p>';
+            return;
+        }
+        
+        sentencesList.innerHTML = '<div class="sentences-container">';
+        
+        window.videoSentences.forEach((sentenceData, index) => {
+            const sentenceCard = document.createElement('div');
+            sentenceCard.className = 'sentence-card';
+            sentenceCard.innerHTML = `
+                <div class="sentence-number">#${index + 1}</div>
+                <div class="sentence-content">
+                    <div class="sentence-translation">${sentenceData.translation || sentenceData.sentence}</div>
+                    <div class="sentence-original" style="display: none;">${sentenceData.sentence}</div>
+                </div>
+                <button class="practice-sentence-btn" onclick="practiceSentence(${index})">
+                    🎤 Practice
+                </button>
+            `;
+            sentencesList.appendChild(sentenceCard);
+        });
+    }
+    
+    // Display word selection interface
+    function displayWordSelection() {
+        const wordList = document.getElementById('wordSelectionList');
+        if (!window.currentVocabulary || window.currentVocabulary.length === 0) {
+            wordList.innerHTML = '<p>No vocabulary available.</p>';
+            return;
+        }
+        
+        // Create a random selection of words (e.g., 10 words)
+        const selectedWords = [...window.currentVocabulary]
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 10);
+        
+        wordList.innerHTML = `
+            <div class="word-selection-header">
+                <h3>Practice these words:</h3>
+                <button class="refresh-words-btn" onclick="displayWordSelection()">
+                    🔄 Get New Words
+                </button>
+            </div>
+            <div class="selected-words-list">
+        `;
+        
+        selectedWords.forEach((word, index) => {
+            const wordItem = document.createElement('div');
+            wordItem.className = 'selected-word-item';
+            wordItem.innerHTML = `
+                <span class="word-number">${index + 1}.</span>
+                <span class="word-translation">${word.translation || word.original_word}</span>
+                <span class="word-original" style="display: none;">${word.original_word}</span>
+                <button class="mini-practice-btn" onclick="practiceSelectedWord(${index}, '${word.original_word}')">
+                    🎤
+                </button>
+            `;
+            wordList.querySelector('.selected-words-list').appendChild(wordItem);
+        });
+        
+        wordList.innerHTML += '</div>';
+    }
+    
+    // Practice a sentence
+    window.practiceSentence = function(index) {
+        if (!window.videoSentences || !window.videoSentences[index]) return;
+        
+        const sentence = window.videoSentences[index];
+        const modal = document.getElementById('dictationModal');
+        const sentenceDisplay = document.getElementById('sentenceDisplay');
+        
+        // Use the existing dictation modal but modify it for sentences
+        currentFullSentence = sentence.sentence;
+        currentSelectedText = '';
+        currentVideoId = getVideoId();
+        currentSentenceIndex = index;
+        practiceStartTime = Date.now();
+        
+        sentenceDisplay.textContent = sentence.sentence;
+        sentenceDisplay.classList.remove('has-selection');
+        
+        modal.style.display = 'block';
+    };
+    
+    // Practice a selected word
+    window.practiceSelectedWord = function(index, germanWord) {
+        // Find the word data
+        const word = window.currentVocabulary.find(w => w.original_word === germanWord);
+        if (!word) return;
+        
+        // Create a simplified practice modal
+        const modal = document.createElement('div');
+        modal.className = 'quick-practice-modal';
+        modal.innerHTML = `
+            <div class="quick-practice-content">
+                <h3>${word.translation || germanWord}</h3>
+                <p>Say: "${germanWord}"</p>
+                <div id="quick-result-${index}"></div>
+                <button onclick="this.parentElement.parentElement.remove()">Close</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Start dictation automatically
+        startQuickDictation(index, germanWord);
+    };
     
     // Display vocabulary
     function displayVocabulary(vocabData) {
