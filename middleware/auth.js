@@ -16,7 +16,7 @@ const isAuthenticated = async (req, res, next) => {
         };
         next();
     } else {
-        res.status(401).json({ error: 'Authentication required' });
+        res.status(401).json({ error: 'Authentifizierung erforderlich' });
     }
 };
 
@@ -25,7 +25,7 @@ const isAdmin = (req, res, next) => {
     if (req.session && req.session.userId && req.session.role === 'admin') {
         next();
     } else {
-        res.status(403).json({ error: 'Admin access required' });
+        res.status(403).json({ error: 'Administratorzugriff erforderlich' });
     }
 };
 

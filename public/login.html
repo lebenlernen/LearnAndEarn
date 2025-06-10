@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de" translate="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - LearnAndEarn</title>
+    <meta name="google" content="notranslate">
+    <title>Anmelden - LearnAndEarn</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="auth.css">
 </head>
@@ -13,64 +14,64 @@
             <h1 class="auth-title">LearnAndEarn</h1>
             
             <div class="auth-tabs">
-                <button class="auth-tab active" data-tab="login">Login</button>
-                <button class="auth-tab" data-tab="register">Register</button>
+                <button class="auth-tab active" data-tab="login">Anmelden</button>
+                <button class="auth-tab" data-tab="register">Registrieren</button>
             </div>
             
             <!-- Login Form -->
             <form id="loginForm" class="auth-form active">
-                <h2>Welcome Back!</h2>
+                <h2>Willkommen zurück!</h2>
                 
                 <div class="form-group">
-                    <label for="loginEmail">Email or Username</label>
+                    <label for="loginEmail">E-Mail oder Benutzername</label>
                     <input type="text" id="loginEmail" name="email" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="loginPassword">Password</label>
+                    <label for="loginPassword">Passwort</label>
                     <input type="password" id="loginPassword" name="password" required>
                 </div>
                 
                 <div id="loginError" class="error-message"></div>
                 
-                <button type="submit" class="auth-button">Login</button>
+                <button type="submit" class="auth-button">Anmelden</button>
                 
                 <p class="auth-link">
-                    Don't have an account? <a href="#" class="switch-tab" data-tab="register">Register</a>
+                    Noch kein Konto? <a href="#" class="switch-tab" data-tab="register">Registrieren</a>
                 </p>
             </form>
             
             <!-- Register Form -->
             <form id="registerForm" class="auth-form">
-                <h2>Create Account</h2>
+                <h2>Konto erstellen</h2>
                 
                 <div class="form-group">
-                    <label for="registerEmail">Email</label>
+                    <label for="registerEmail">E-Mail</label>
                     <input type="email" id="registerEmail" name="email" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="registerUsername">Username</label>
+                    <label for="registerUsername">Benutzername</label>
                     <input type="text" id="registerUsername" name="username" required>
                 </div>
                 
                 <div class="form-group">
-                    <label for="registerPassword">Password</label>
+                    <label for="registerPassword">Passwort</label>
                     <input type="password" id="registerPassword" name="password" required>
-                    <small>Minimum 6 characters</small>
+                    <small>Mindestens 6 Zeichen</small>
                 </div>
                 
                 <div id="registerError" class="error-message"></div>
                 
-                <button type="submit" class="auth-button">Register</button>
+                <button type="submit" class="auth-button">Registrieren</button>
                 
                 <p class="auth-link">
-                    Already have an account? <a href="#" class="switch-tab" data-tab="login">Login</a>
+                    Bereits ein Konto? <a href="#" class="switch-tab" data-tab="login">Anmelden</a>
                 </p>
             </form>
             
             <div class="auth-footer">
-                <a href="/home.html" class="back-link">← Back to Home</a>
+                <a href="/home.html" class="back-link">← Zurück zur Startseite</a>
             </div>
         </div>
     </div>

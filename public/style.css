@@ -1613,28 +1613,199 @@ body {
     transform: scale(1.1);
 }
 
-/* Quick Practice Modal */
-.quick-practice-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+/* Word Selection Display */
+.word-selection-display {
+    font-size: 1.3em;
+    line-height: 2;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.word-selection-item {
+    display: inline-block;
+    padding: 8px 16px;
+    margin: 4px 0;
     background: white;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    border: 2px solid #dee2e6;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    color: #1976d2;
+}
+
+.word-selection-item:hover {
+    background: #e3f2fd;
+    border-color: #1976d2;
+    transform: scale(1.05);
+}
+
+.word-selection-item.practiced {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.word-separator {
+    color: #6c757d;
+    margin: 0 4px;
+}
+
+/* Word Practice Modal */
+.word-practice-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     z-index: 10000;
 }
 
-.quick-practice-content h3 {
+.word-practice-content {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.practice-word-display {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.translation-large {
+    font-size: 2.5em;
+    font-weight: 600;
     color: #1976d2;
     margin-bottom: 10px;
 }
 
-.quick-practice-content p {
+.instruction {
     font-size: 1.1em;
-    color: #495057;
-    margin-bottom: 20px;
+    color: #666;
+}
+
+.dictation-section {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.dictate-btn.large {
+    font-size: 1.2em;
+    padding: 15px 30px;
+}
+
+.word-result {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.result-text {
+    font-size: 1.3em;
+    color: #333;
+    margin: 0;
+}
+
+.listening-text {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.error-text {
+    color: #dc3545;
+}
+
+.word-feedback {
+    margin-top: 20px;
+}
+
+.feedback-success,
+.feedback-error {
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.feedback-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.feedback-error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.word-hint {
+    text-align: center;
+    border-top: 1px solid #e9ecef;
+    padding-top: 20px;
+}
+
+.hint-btn {
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.hint-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.german-reveal {
+    margin-top: 15px;
+    padding: 15px;
+    background: #e3f2fd;
+    border-radius: 8px;
+}
+
+.german-reveal p {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.play-word-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.play-word-btn:hover {
+    background: #218838;
+}
+
+.try-again-btn {
+    background: #ffc107;
+    color: #212529;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: all 0.3s ease;
+}
+
+.try-again-btn:hover {
+    background: #e0a800;
 }
 
 /* Sentences Modal Styles for Word Context */
@@ -1933,4 +2104,100 @@ body {
     0% { transform: scale(0) rotate(0deg); }
     50% { transform: scale(1.2) rotate(10deg); }
     100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Word Selection Modal Styles */
+.word-selection-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+}
+
+.word-selection-modal-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.word-selection-header {
+    padding: 25px 30px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    text-align: center;
+}
+
+.selection-word-display {
+    font-size: 2.5em;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.selection-instruction {
+    font-size: 1.1em;
+    color: #666;
+    margin: 0;
+}
+
+.word-options-grid {
+    padding: 30px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.word-option {
+    padding: 15px 20px;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.word-option:hover {
+    background: #e3f2fd;
+    border-color: #1976d2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.word-option.correct {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+    animation: correctPulse 0.5s ease-in-out;
+}
+
+.word-option.wrong {
+    background: #ff9800;
+    color: white;
+    border-color: #ff9800;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes correctPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }

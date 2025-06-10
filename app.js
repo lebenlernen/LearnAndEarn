@@ -78,6 +78,10 @@ app.use('/api/vocabulary', vocabularyRoutes);
 const spacyRoutes = require('./routes/spacy');
 app.use('/api/spacy', spacyRoutes);
 
+// Import activity tracking routes
+const activityRoutes = require('./routes/activity');
+app.use('/api/activity', activityRoutes);
+
 // Import auth middleware
 const { optionalAuth, isAuthenticated, isAdmin } = require('./middleware/auth');
 

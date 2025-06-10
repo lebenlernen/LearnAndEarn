@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de" translate="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <meta name="robots" content="notranslate">
     <title>Vokabeln - LearnAndEarn</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -233,19 +235,19 @@
 <body>
     <div class="user-header" id="userHeader" style="display: none;">
         <div class="nav-links">
-            <a href="/home.html" class="nav-link">Home</a>
-            <a href="/search.html" class="nav-link">Video Search</a>
+            <a href="/home.html" class="nav-link">Startseite</a>
+            <a href="/search.html" class="nav-link">Videosuche</a>
             <a href="/vocabulary.html" class="nav-link active">Vokabeln</a>
-            <a href="/progress.html" class="nav-link">My Progress</a>
+            <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
         </div>
         <div class="user-menu">
             <div class="user-info">
-                <span>Welcome, <span class="user-name" id="userName"></span></span>
+                <span>Willkommen, <span class="user-name" id="userName"></span></span>
                 <span class="user-role" id="userRole"></span>
             </div>
             <div class="user-actions">
-                <a href="/profile.html">My Profile</a>
-                <button class="logout-button" onclick="logout()">Logout</button>
+                <a href="/profile.html">Mein Profil</a>
+                <button class="logout-button" onclick="logout()">Abmelden</button>
             </div>
         </div>
     </div>
@@ -253,36 +255,36 @@
     <div class="vocabulary-container">
         <div class="vocab-header">
             <h1>Vokabeln lernen</h1>
-            <p>Spaced Repetition Learning with Speech Recognition</p>
+            <p>Spaced-Repetition-Lernen mit Spracherkennung</p>
         </div>
         
         <div class="mode-selector">
-            <button class="mode-btn active" data-mode="word">Word Mode</button>
-            <button class="mode-btn" data-mode="sentence">Sentence Mode</button>
+            <button class="mode-btn active" data-mode="word">Wortmodus</button>
+            <button class="mode-btn" data-mode="sentence">Satzmodus</button>
         </div>
         
         <div class="vocab-stats">
             <div class="stat-card">
                 <div class="stat-number" id="newWords">0</div>
-                <div class="stat-label">New Words</div>
+                <div class="stat-label">Neue Wörter</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number" id="reviewWords">0</div>
-                <div class="stat-label">To Review</div>
+                <div class="stat-label">Zu wiederholen</div>
             </div>
             <div class="stat-card">
                 <div class="stat-number" id="masteredWords">0</div>
-                <div class="stat-label">Mastered</div>
+                <div class="stat-label">Gemeistert</div>
             </div>
         </div>
         
         <div class="vocab-card" id="vocabCard">
             <div class="no-vocab-message">
-                <h2>Getting Started with Vocabulary</h2>
-                <p>Select a video from the search page that has vocabulary available.</p>
-                <p>Look for videos with the "✓ Vokabeln" indicator.</p>
+                <h2>Erste Schritte mit Vokabeln</h2>
+                <p>Wählen Sie ein Video von der Suchseite aus, das Vokabeln enthält.</p>
+                <p>Achten Sie auf Videos mit dem "✓ Vokabeln" Indikator.</p>
                 <button class="btn btn-primary" onclick="window.location.href='/search.html'">
-                    Browse Videos
+                    Videos durchsuchen
                 </button>
             </div>
             

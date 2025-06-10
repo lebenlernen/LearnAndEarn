@@ -54,11 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || '/';
                 window.location.href = redirectUrl;
             } else {
-                loginError.textContent = data.error || 'Login failed. Please try again.';
+                loginError.textContent = data.error || 'Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.';
             }
         } catch (error) {
             console.error('Login error:', error);
-            loginError.textContent = 'An error occurred. Please try again.';
+            loginError.textContent = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.';
         }
     });
     }
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Client-side validation
         if (password.length < 6) {
-            registerError.textContent = 'Password must be at least 6 characters long.';
+            registerError.textContent = 'Das Passwort muss mindestens 6 Zeichen lang sein.';
             return;
         }
         
@@ -99,11 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Auto-login after registration
                 window.location.href = '/';
             } else {
-                registerError.textContent = data.error || 'Registration failed. Please try again.';
+                registerError.textContent = data.error || 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.';
             }
         } catch (error) {
             console.error('Registration error:', error);
-            registerError.textContent = 'An error occurred. Please try again.';
+            registerError.textContent = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.';
         }
     });
     }

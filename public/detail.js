@@ -795,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stopSpeechRecognition();
     };
     
-
+    window.displayWordSelection = displayWordSelection;
     window.startSpeechRecognition = startSpeechRecognition;
     window.showPracticeHistory = showPracticeHistory;
     window.openDictationModal = openDictationModal;
@@ -894,8 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                     
                 case 'wortauswahl':
-                    displayWordSelection();
-                    document.getElementById('wordSelectionList').style.display = 'block';
+                    // Vocabulary cards will show word selection on click
                     break;
             }
         });
@@ -918,6 +917,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         const wordIndex = parseInt(card.dataset.wordIndex);
                         const germanWord = card.dataset.germanWord;
                         showSentencesForWord(germanWord, wordIndex);
+                    });
+                } else if (mode === 'wortauswahl') {
+                    newTranslationDiv.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const wordIndex = parseInt(card.dataset.wordIndex);
+                        const germanWord = card.dataset.germanWord;
+                        showWordSelectionForWord(germanWord, wordIndex);
                     });
                 } else {
                     // Default behavior for einzelwort
@@ -1049,6 +1055,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
+        // Track sentence attempts for this word
+        let sentenceAttempts = 0;
+        const sentenceStartTime = Date.now();
+        
         // Add click handlers to all words
         modal.querySelectorAll('.clickable-word').forEach(wordSpan => {
             wordSpan.addEventListener('click', (e) => {
@@ -1059,19 +1069,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (clickedWord.toLowerCase() === germanWord.toLowerCase()) {
                     // Correct word clicked
+                    const timeSpent = (Date.now() - sentenceStartTime) / 1000; // seconds
+                    
+                    // Calculate difficulty based on attempts and time
+                    let difficulty;
+                    if (sentenceAttempts === 0 && timeSpent < 5) {
+                        difficulty = 1; // Easy - found quickly on first try
+                    } else if (sentenceAttempts <= 1 && timeSpent < 10) {
+                        difficulty = 2; // Good - found with minimal help
+                    } else if (sentenceAttempts <= 3 || timeSpent < 20) {
+                        difficulty = 3; // Hard - needed some attempts or time
+                    } else {
+                        difficulty = 4; // Again - struggled to find
+                    }
+                    
+                    // Save practice to spaced repetition
+                    const wordData = window.currentVocabulary[wordIndex];
+                    if (wordData) {
+                        savePracticeToSpacedRepetition(germanWord, wordData.lemma, difficulty);
+                        console.log(`Sentence practice saved: ${germanWord}, attempts: ${sentenceAttempts}, time: ${timeSpent.toFixed(1)}s, difficulty: ${difficulty}`);
+                        
+                        // Track activity
+                        if (window.activityMonitor) {
+                            window.activityMonitor.trackSentencePractice(
+                                sentenceContainer.textContent.trim(),
+                                germanWord,
+                                sentenceAttempts,
+                                timeSpent
+                            );
+                        }
+                    }
+                    
                     modal.remove();
                     if (!isOtherVideo && sentenceIndex >= 0) {
                         // Practice with sentence from current video
                         practiceSentenceFromWord(sentenceIndex, germanWord);
                     } else {
-                        // For sentences from other videos, show success feedback but also allow practice
-                        showSuccessMessage(germanWord, translation);
+                        // For sentences from other videos, show success feedback
+                        showSuccessMessageWithStats(germanWord, translation, sentenceAttempts, timeSpent);
                         // Still open practice modal with the sentence
                         const sentenceText = e.target.closest('.sentence-clickable').textContent.trim();
                         openDictationModalForOtherVideo(sentenceText, germanWord);
                     }
                 } else {
-                    // Wrong word clicked - mark it orange
+                    // Wrong word clicked - mark it orange and count attempt
+                    sentenceAttempts++;
                     e.target.classList.add('wrong-selection');
                     setTimeout(() => {
                         e.target.classList.remove('wrong-selection');
@@ -1119,6 +1161,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3>Correct!</h3>
                 <p><strong>${translation}</strong> = <strong>${germanWord}</strong></p>
                 <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">Continue</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Auto-close after 3 seconds
+        setTimeout(() => {
+            modal.remove();
+        }, 3000);
+    }
+    
+    // Show success message with performance statistics
+    function showSuccessMessageWithStats(germanWord, translation, attempts, timeSpent) {
+        let performanceMessage;
+        if (attempts === 0 && timeSpent < 5) {
+            performanceMessage = 'Ausgezeichnet! Sofort gefunden!';
+        } else if (attempts <= 1 && timeSpent < 10) {
+            performanceMessage = 'Gut gemacht!';
+        } else if (attempts <= 3) {
+            performanceMessage = 'Weiter üben!';
+        } else {
+            performanceMessage = 'Nicht aufgeben - Übung macht den Meister!';
+        }
+        
+        const modal = document.createElement('div');
+        modal.className = 'success-modal';
+        modal.innerHTML = `
+            <div class="success-modal-content">
+                <div class="success-icon">✅</div>
+                <h3>Richtig!</h3>
+                <p><strong>${translation}</strong> = <strong>${germanWord}</strong></p>
+                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                    ${performanceMessage}
+                </p>
+                <p style="font-size: 0.85em; color: #999;">
+                    Zeit: ${timeSpent.toFixed(1)}s ${attempts > 0 ? `• Versuche: ${attempts + 1}` : ''}
+                </p>
+                <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">Weiter</button>
             </div>
         `;
         document.body.appendChild(modal);
@@ -1229,7 +1308,163 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Display word selection interface
+    // Show word selection for a specific word
+    function showWordSelectionForWord(correctGermanWord, wordIndex) {
+        const wordData = window.currentVocabulary[wordIndex];
+        const correctTranslation = wordData.translation || 'Translation not available';
+        
+        // Create a selection of 10 German words including the correct one
+        let wordSelection = [wordData];
+        
+        // Add 9 more random words from vocabulary
+        const otherWords = window.currentVocabulary
+            .filter((w, idx) => idx !== wordIndex)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 9);
+        
+        wordSelection = wordSelection.concat(otherWords);
+        
+        // Shuffle the selection
+        wordSelection = wordSelection.sort(() => Math.random() - 0.5);
+        
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'word-selection-modal';
+        modal.innerHTML = `
+            <div class="word-selection-modal-content">
+                <span class="close-modal" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <div class="word-selection-header">
+                    <div class="selection-word-display">${correctTranslation}</div>
+                    <p class="selection-instruction">Klicken Sie auf das richtige deutsche Wort:</p>
+                </div>
+                <div class="word-options-grid">
+                    ${wordSelection.map((word) => `
+                        <div class="word-option" 
+                             onclick="checkWordChoice('${word.original_word}', '${correctGermanWord}', this)">
+                            ${word.original_word}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    // Track wrong attempts for difficulty calculation
+    window.wordSelectionAttempts = window.wordSelectionAttempts || {};
+    
+    // Save practice data to spaced repetition system
+    async function savePracticeToSpacedRepetition(word, lemma, difficulty) {
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoId = urlParams.get('id');
+            
+            const response = await fetch('/api/spacy/vocabulary-practice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    videoId: videoId,
+                    word: word,
+                    lemma: lemma,
+                    difficulty: difficulty
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Practice saved:', data);
+                
+                // Show next review date in console
+                const nextReview = new Date(data.next_review);
+                const daysUntilReview = Math.ceil((nextReview - new Date()) / (1000 * 60 * 60 * 24));
+                console.log(`Next review for "${word}" in ${daysUntilReview} days`);
+            } else {
+                console.error('Failed to save practice');
+            }
+        } catch (error) {
+            console.error('Error saving practice:', error);
+        }
+    }
+    
+    // Check word choice
+    window.checkWordChoice = function(selectedGerman, correctGerman, element) {
+        // Initialize attempts counter for this word
+        if (!window.wordSelectionAttempts[correctGerman]) {
+            window.wordSelectionAttempts[correctGerman] = 0;
+        }
+        
+        if (selectedGerman === correctGerman) {
+            // Correct choice
+            element.classList.add('correct');
+            
+            // Calculate difficulty based on attempts
+            const attempts = window.wordSelectionAttempts[correctGerman];
+            let difficulty;
+            if (attempts === 0) {
+                difficulty = 1; // Easy - first try
+            } else if (attempts === 1) {
+                difficulty = 2; // Good - second try
+            } else if (attempts <= 3) {
+                difficulty = 3; // Hard - few attempts
+            } else {
+                difficulty = 4; // Again - many attempts
+            }
+            
+            // Find the word data to get lemma and other info
+            const wordData = window.currentVocabulary.find(w => w.original_word === correctGerman);
+            if (wordData) {
+                // Save practice to spaced repetition system
+                savePracticeToSpacedRepetition(correctGerman, wordData.lemma, difficulty);
+                
+                // Track activity
+                if (window.activityMonitor) {
+                    window.activityMonitor.trackWordSelection(correctGerman, attempts, 0);
+                }
+            }
+            
+            // Reset attempts for this word
+            delete window.wordSelectionAttempts[correctGerman];
+            
+            // Show success and close modal after delay
+            setTimeout(() => {
+                const modal = element.closest('.word-selection-modal');
+                modal.remove();
+                
+                // Show success message
+                const successModal = document.createElement('div');
+                successModal.className = 'success-modal';
+                successModal.innerHTML = `
+                    <div class="success-modal-content">
+                        <div class="success-icon">✅</div>
+                        <h3>Richtig!</h3>
+                        <p><strong>${correctGerman}</strong></p>
+                        <p style="font-size: 0.9em; color: #666;">
+                            ${attempts === 0 ? 'Perfekt beim ersten Versuch!' : 
+                              attempts === 1 ? 'Gut gemacht!' : 
+                              'Weiter üben!'}
+                        </p>
+                        <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">Weiter</button>
+                    </div>
+                `;
+                document.body.appendChild(successModal);
+                
+                setTimeout(() => {
+                    successModal.remove();
+                }, 2000);
+            }, 500);
+        } else {
+            // Wrong choice
+            window.wordSelectionAttempts[correctGerman]++;
+            element.classList.add('wrong');
+            setTimeout(() => {
+                element.classList.remove('wrong');
+            }, 1000);
+        }
+    };
+    
+    // Display word selection interface (not used in current implementation)
     function displayWordSelection() {
         const wordList = document.getElementById('wordSelectionList');
         if (!window.currentVocabulary || window.currentVocabulary.length === 0) {
@@ -1237,36 +1472,32 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Create a random selection of words (e.g., 10 words)
+        // Create a random selection of words (10 words)
         const selectedWords = [...window.currentVocabulary]
             .sort(() => Math.random() - 0.5)
             .slice(0, 10);
         
+        // Store selected words globally for practice
+        window.selectedPracticeWords = selectedWords;
+        
         wordList.innerHTML = `
             <div class="word-selection-header">
-                <h3>Practice these words:</h3>
+                <h3>Click on a word to practice:</h3>
                 <button class="refresh-words-btn" onclick="displayWordSelection()">
                     🔄 Get New Words
                 </button>
             </div>
-            <div class="selected-words-list">
+            <div class="word-selection-display">
+                ${selectedWords.map((word, index) => `
+                    <span class="word-selection-item" 
+                          data-index="${index}" 
+                          data-german="${word.original_word}"
+                          onclick="practiceWordFromSelection(${index})">
+                        ${word.translation || word.original_word}
+                    </span>
+                `).join('<span class="word-separator">, </span>')}
+            </div>
         `;
-        
-        selectedWords.forEach((word, index) => {
-            const wordItem = document.createElement('div');
-            wordItem.className = 'selected-word-item';
-            wordItem.innerHTML = `
-                <span class="word-number">${index + 1}.</span>
-                <span class="word-translation">${word.translation || word.original_word}</span>
-                <span class="word-original" style="display: none;">${word.original_word}</span>
-                <button class="mini-practice-btn" onclick="practiceSelectedWord(${index}, '${word.original_word}')">
-                    🎤
-                </button>
-            `;
-            wordList.querySelector('.selected-words-list').appendChild(wordItem);
-        });
-        
-        wordList.innerHTML += '</div>';
     }
     
     // Practice a sentence
@@ -1290,27 +1521,202 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.style.display = 'block';
     };
     
-    // Practice a selected word
-    window.practiceSelectedWord = function(index, germanWord) {
-        // Find the word data
-        const word = window.currentVocabulary.find(w => w.original_word === germanWord);
-        if (!word) return;
+    // Practice word from word selection mode
+    window.practiceWordFromSelection = function(index) {
+        if (!window.selectedPracticeWords || !window.selectedPracticeWords[index]) return;
         
-        // Create a simplified practice modal
+        const word = window.selectedPracticeWords[index];
+        const germanWord = word.original_word;
+        const translation = word.translation || germanWord;
+        
+        // Create practice modal
         const modal = document.createElement('div');
-        modal.className = 'quick-practice-modal';
+        modal.className = 'word-practice-modal';
         modal.innerHTML = `
-            <div class="quick-practice-content">
-                <h3>${word.translation || germanWord}</h3>
-                <p>Say: "${germanWord}"</p>
-                <div id="quick-result-${index}"></div>
-                <button onclick="this.parentElement.parentElement.remove()">Close</button>
+            <div class="word-practice-content">
+                <span class="close-modal" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                <h2>Practice Word</h2>
+                
+                <div class="practice-word-display">
+                    <div class="translation-large">${translation}</div>
+                    <p class="instruction">Say this word in German:</p>
+                </div>
+                
+                <div class="dictation-section">
+                    <button class="dictate-btn large" onclick="toggleWordPractice(${index})">
+                        <span class="mic-icon">🎤</span> Start Dictation
+                    </button>
+                    <div id="word-result-${index}" class="word-result" style="display: none;"></div>
+                    <div id="word-feedback-${index}" class="word-feedback" style="display: none;"></div>
+                </div>
+                
+                <div class="word-hint">
+                    <button class="hint-btn" onclick="revealGermanWord(${index})">
+                        💡 Show German Word
+                    </button>
+                    <div id="german-reveal-${index}" class="german-reveal" style="display: none;">
+                        <p>German: <strong>${germanWord}</strong></p>
+                        <button class="play-word-btn" onclick="speakText('${germanWord}', 0.8)">
+                            🔊 Play
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
         document.body.appendChild(modal);
         
-        // Start dictation automatically
-        startQuickDictation(index, germanWord);
+        // Store current practice word globally
+        window.currentPracticeWord = word;
+        window.currentPracticeIndex = index;
+    };
+    
+    // Toggle word practice dictation
+    window.toggleWordPractice = function(index) {
+        const btn = document.querySelector('.word-practice-modal .dictate-btn');
+        const resultDiv = document.getElementById(`word-result-${index}`);
+        const feedbackDiv = document.getElementById(`word-feedback-${index}`);
+        
+        if (!window.wordPracticeRecognition) {
+            // Initialize recognition
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert('Speech recognition not supported');
+                return;
+            }
+            
+            window.wordPracticeRecognition = new SpeechRecognition();
+            window.wordPracticeRecognition.lang = 'de-DE';
+            window.wordPracticeRecognition.continuous = false;
+            window.wordPracticeRecognition.interimResults = true;
+            window.wordPracticeRecognition.maxAlternatives = 1;
+        }
+        
+        const recognition = window.wordPracticeRecognition;
+        
+        if (!window.isWordPracticeListening) {
+            // Start listening
+            recognition.onstart = () => {
+                window.isWordPracticeListening = true;
+                btn.innerHTML = '<span class="mic-icon">🔴</span> Stop Dictation';
+                btn.classList.add('listening');
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = '<p class="listening-text">Listening...</p>';
+                feedbackDiv.style.display = 'none';
+            };
+            
+            recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript = event.results[i][0].transcript;
+                }
+                resultDiv.innerHTML = `<p class="result-text">"${transcript}"</p>`;
+                
+                // Auto-stop after detecting a word
+                if (transcript.trim().split(/\s+/).length >= 1) {
+                    setTimeout(() => {
+                        if (window.isWordPracticeListening) {
+                            recognition.stop();
+                        }
+                    }, 500);
+                }
+            };
+            
+            recognition.onend = () => {
+                window.isWordPracticeListening = false;
+                btn.innerHTML = '<span class="mic-icon">🎤</span> Start Dictation';
+                btn.classList.remove('listening');
+                
+                // Check the result
+                const spokenText = resultDiv.querySelector('.result-text')?.textContent.replace(/['"]/g, '').trim();
+                if (spokenText) {
+                    checkWordResult(spokenText, index);
+                }
+            };
+            
+            recognition.onerror = (event) => {
+                console.error('Recognition error:', event.error);
+                window.isWordPracticeListening = false;
+                btn.innerHTML = '<span class="mic-icon">🎤</span> Start Dictation';
+                btn.classList.remove('listening');
+                resultDiv.innerHTML = '<p class="error-text">Error: ' + event.error + '</p>';
+            };
+            
+            recognition.start();
+        } else {
+            // Stop listening
+            recognition.stop();
+        }
+    };
+    
+    // Check word result
+    function checkWordResult(spokenText, index) {
+        const word = window.currentPracticeWord;
+        const germanWord = word.original_word.toLowerCase();
+        const spoken = spokenText.toLowerCase();
+        const feedbackDiv = document.getElementById(`word-feedback-${index}`);
+        
+        feedbackDiv.style.display = 'block';
+        
+        if (spoken === germanWord) {
+            feedbackDiv.innerHTML = `
+                <div class="feedback-success">
+                    <p>✅ Correct! Excellent pronunciation!</p>
+                    <div class="rating-buttons">
+                        <p>How difficult was this?</p>
+                        <button onclick="rateAndNext(1, ${index})" class="rate-btn easy">😄 Easy</button>
+                        <button onclick="rateAndNext(2, ${index})" class="rate-btn good">😊 Good</button>
+                        <button onclick="rateAndNext(3, ${index})" class="rate-btn hard">😐 Hard</button>
+                        <button onclick="rateAndNext(4, ${index})" class="rate-btn again">😣 Again</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            feedbackDiv.innerHTML = `
+                <div class="feedback-error">
+                    <p>❌ Not quite right. You said: "${spokenText}"</p>
+                    <p>The correct word is: <strong>${word.original_word}</strong></p>
+                    <button class="try-again-btn" onclick="toggleWordPractice(${index})">Try Again</button>
+                </div>
+            `;
+        }
+    }
+    
+    // Reveal German word hint
+    window.revealGermanWord = function(index) {
+        const revealDiv = document.getElementById(`german-reveal-${index}`);
+        revealDiv.style.display = 'block';
+    };
+    
+    // Rate and go to next word
+    window.rateAndNext = async function(difficulty, index) {
+        const word = window.currentPracticeWord;
+        const videoId = getVideoId();
+        
+        // Save rating
+        try {
+            await fetch('/api/spacy/vocabulary-practice', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    videoId: videoId,
+                    word: word.original_word,
+                    lemma: word.lemma || word.original_word,
+                    difficulty: difficulty
+                }),
+                credentials: 'same-origin'
+            });
+        } catch (error) {
+            console.error('Error saving rating:', error);
+        }
+        
+        // Close modal
+        document.querySelector('.word-practice-modal').remove();
+        
+        // Mark word as practiced
+        const wordElement = document.querySelector(`.word-selection-item[data-index="${index}"]`);
+        if (wordElement) {
+            wordElement.classList.add('practiced');
+        }
     };
     
     // Display vocabulary

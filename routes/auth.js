@@ -9,11 +9,11 @@ router.post('/register', async (req, res) => {
     
     // Validate input
     if (!email || !username || !password) {
-        return res.status(400).json({ error: 'Email, username, and password are required' });
+        return res.status(400).json({ error: 'E-Mail, Benutzername und Passwort sind erforderlich' });
     }
     
     if (password.length < 6) {
-        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        return res.status(400).json({ error: 'Das Passwort muss mindestens 6 Zeichen lang sein' });
     }
     
     const client = await req.db.connect();
@@ -29,7 +29,7 @@ router.post('/register', async (req, res) => {
         
         if (existingUser.rows.length > 0) {
             await client.query('ROLLBACK');
-            return res.status(400).json({ error: 'User with this email or username already exists' });
+            return res.status(400).json({ error: 'Ein Benutzer mit dieser E-Mail oder diesem Benutzernamen existiert bereits' });
         }
         
         // Hash password
@@ -77,7 +77,7 @@ router.post('/register', async (req, res) => {
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Registration error:', error);
-        res.status(500).json({ error: 'Failed to register user' });
+        res.status(500).json({ error: 'Registrierung fehlgeschlagen' });
     } finally {
         client.release();
     }
@@ -88,7 +88,7 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     
     if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required' });
+        return res.status(400).json({ error: 'E-Mail und Passwort sind erforderlich' });
     }
     
     try {
@@ -99,20 +99,20 @@ router.post('/login', async (req, res) => {
         );
         
         if (result.rows.length === 0) {
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(401).json({ error: 'Ungültige Anmeldedaten' });
         }
         
         const user = result.rows[0];
         
         // Check if user is active
         if (!user.is_active) {
-            return res.status(401).json({ error: 'Account is disabled' });
+            return res.status(401).json({ error: 'Konto ist deaktiviert' });
         }
         
         // Verify password
         const validPassword = await bcrypt.compare(password, user.password_hash);
         if (!validPassword) {
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(401).json({ error: 'Ungültige Anmeldedaten' });
         }
         
         // Get user roles
@@ -142,7 +142,7 @@ router.post('/login', async (req, res) => {
         req.session.save((err) => {
             if (err) {
                 console.error('Session save error:', err);
-                return res.status(500).json({ error: 'Failed to save session' });
+                return res.status(500).json({ error: 'Sitzung konnte nicht gespeichert werden' });
             }
             
             res.json({ 
@@ -157,7 +157,7 @@ router.post('/login', async (req, res) => {
         });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Failed to login' });
+        res.status(500).json({ error: 'Anmeldung fehlgeschlagen' });
     }
 });
 
@@ -165,7 +165,7 @@ router.post('/login', async (req, res) => {
 router.post('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
-            return res.status(500).json({ error: 'Failed to logout' });
+            return res.status(500).json({ error: 'Abmeldung fehlgeschlagen' });
         }
         res.clearCookie('connect.sid'); // Clear the session cookie
         res.json({ success: true });
@@ -181,7 +181,7 @@ router.get('/me', isAuthenticated, async (req, res) => {
         );
         
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'Benutzer nicht gefunden' });
         }
         
         const user = result.rows[0];
@@ -212,7 +212,7 @@ router.get('/me', isAuthenticated, async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching user:', error);
-        res.status(500).json({ error: 'Server error' });
+        res.status(500).json({ error: 'Serverfehler' });
     }
 });
 
@@ -226,7 +226,7 @@ router.put('/profile', isAuthenticated, async (req, res) => {
         if (timezone) {
             const validTimezones = Intl.supportedValuesOf('timeZone');
             if (!validTimezones.includes(timezone)) {
-                return res.status(400).json({ error: 'Invalid timezone' });
+                return res.status(400).json({ error: 'Ungültige Zeitzone' });
             }
         }
         
@@ -242,12 +242,12 @@ router.put('/profile', isAuthenticated, async (req, res) => {
         );
         
         res.json({ 
-            message: 'Profile updated successfully',
+            message: 'Profil erfolgreich aktualisiert',
             user: result.rows[0]
         });
     } catch (error) {
         console.error('Error updating profile:', error);
-        res.status(500).json({ error: 'Failed to update profile' });
+        res.status(500).json({ error: 'Profilaktualisierung fehlgeschlagen' });
     }
 });
 
@@ -256,11 +256,11 @@ router.post('/change-password', isAuthenticated, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     
     if (!currentPassword || !newPassword) {
-        return res.status(400).json({ error: 'Current and new passwords are required' });
+        return res.status(400).json({ error: 'Aktuelles und neues Passwort sind erforderlich' });
     }
     
     if (newPassword.length < 6) {
-        return res.status(400).json({ error: 'New password must be at least 6 characters' });
+        return res.status(400).json({ error: 'Das neue Passwort muss mindestens 6 Zeichen lang sein' });
     }
     
     try {
@@ -271,13 +271,13 @@ router.post('/change-password', isAuthenticated, async (req, res) => {
         );
         
         if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ error: 'Benutzer nicht gefunden' });
         }
         
         // Verify current password
         const validPassword = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
         if (!validPassword) {
-            return res.status(401).json({ error: 'Current password is incorrect' });
+            return res.status(401).json({ error: 'Das aktuelle Passwort ist falsch' });
         }
         
         // Hash new password
@@ -289,10 +289,10 @@ router.post('/change-password', isAuthenticated, async (req, res) => {
             [hashedPassword, req.session.userId]
         );
         
-        res.json({ success: true, message: 'Password updated successfully' });
+        res.json({ success: true, message: 'Passwort erfolgreich aktualisiert' });
     } catch (error) {
         console.error('Password change error:', error);
-        res.status(500).json({ error: 'Failed to change password' });
+        res.status(500).json({ error: 'Passwortänderung fehlgeschlagen' });
     }
 });
 
