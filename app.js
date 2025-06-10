@@ -82,6 +82,10 @@ app.use('/api/spacy', spacyRoutes);
 const activityRoutes = require('./routes/activity');
 app.use('/api/activity', activityRoutes);
 
+// Import Lückentexte routes
+const lueckentexteRoutes = require('./routes/lueckentexte');
+app.use('/api/lueckentexte', lueckentexteRoutes);
+
 // Import auth middleware
 const { optionalAuth, isAuthenticated, isAdmin } = require('./middleware/auth');
 

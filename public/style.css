@@ -1427,6 +1427,77 @@ body {
     background-color: rgba(25, 118, 210, 0.1);
 }
 
+/* Cloze Type Selection Styles */
+.cloze-type-selector {
+    margin-bottom: 20px;
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.cloze-type-selector label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.cloze-type-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cloze-type-btn {
+    padding: 6px 14px;
+    border: 2px solid #e0e0e0;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.cloze-type-btn:hover {
+    border-color: #007bff;
+    background: #f0f7ff;
+}
+
+.cloze-type-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.cloze-type-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Cloze dictation controls */
+.cloze-dictation-controls {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.cloze-dictation-controls .btn-speech {
+    background: #f39c12;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cloze-dictation-controls .btn-speech:hover {
+    background: #e67e22;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
+}
+
 .word-dictation-area {
     margin-top: 15px;
     padding: 15px;

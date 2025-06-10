@@ -308,7 +308,7 @@ router.get('/vocabulary/:videoId', isAuthenticated, async (req, res) => {
 router.get('/cloze-tests/:videoId', isAuthenticated, async (req, res) => {
     try {
         const { videoId } = req.params; // This is the internal ID
-        const { count = 5 } = req.query;
+        const { count = 5, type = 'random' } = req.query;
         
         // First, get the YouTube video_id and summary
         const videoQuery = `
@@ -334,7 +334,7 @@ router.get('/cloze-tests/:videoId', isAuthenticated, async (req, res) => {
         try {
             // Try SpaCy API first
             const response = await axios.get(
-                `${SPACY_API_URL}/cloze_tests/${youtubeVideoId}?count=${count}`
+                `${SPACY_API_URL}/cloze_tests/${youtubeVideoId}?count=${count}&type=${type}`
             );
             
             res.json({
@@ -370,24 +370,78 @@ router.get('/cloze-tests/:videoId', isAuthenticated, async (req, res) => {
                 const sentence = sentences[randomIndex];
                 const words = sentence.split(/\s+/);
                 
-                // Find content words (skip articles, prepositions, etc.)
-                const contentWords = words.filter(word => {
-                    const clean = word.toLowerCase().replace(/[.,!?;:"']/g, '');
-                    return clean.length > 3 && 
-                           !['der', 'die', 'das', 'und', 'oder', 'aber', 'weil', 'dass', 'mit', 'von', 'für', 'auf', 'bei', 'nach', 'vor', 'über', 'unter'].includes(clean);
-                });
+                // Filter words based on exercise type
+                let targetWords = [];
                 
-                if (contentWords.length > 0) {
-                    const targetWord = contentWords[Math.floor(Math.random() * contentWords.length)];
+                if (type === 'artikel') {
+                    // Find articles (only definite articles)
+                    const articles = ['der', 'die', 'das', 'den', 'dem', 'des'];
+                    targetWords = words.filter(word => {
+                        const clean = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                        return articles.includes(clean);
+                    });
+                } else if (type === 'schwierig') {
+                    // Find difficult/long words
+                    targetWords = words.filter(word => {
+                        const clean = word.replace(/[.,!?;:"']/g, '');
+                        return clean.length > 8;
+                    });
+                } else if (type === 'adjektive') {
+                    // Simple heuristic for adjectives (words ending in common adjective suffixes)
+                    targetWords = words.filter(word => {
+                        const clean = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                        return clean.length > 3 && 
+                               (clean.endsWith('ig') || clean.endsWith('lich') || clean.endsWith('isch') ||
+                                clean.endsWith('bar') || clean.endsWith('sam') || clean.endsWith('haft'));
+                    });
+                } else {
+                    // Default: content words (nouns, verbs - original behavior)
+                    targetWords = words.filter(word => {
+                        const clean = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                        return clean.length > 3 && 
+                               !['der', 'die', 'das', 'und', 'oder', 'aber', 'weil', 'dass', 'mit', 'von', 'für', 'auf', 'bei', 'nach', 'vor', 'über', 'unter'].includes(clean);
+                    });
+                }
+                
+                if (targetWords.length > 0) {
+                    const targetWord = targetWords[Math.floor(Math.random() * targetWords.length)];
                     const cleanTarget = targetWord.replace(/[.,!?;:"']/g, '');
                     const blankedSentence = sentence.replace(targetWord, '_____');
+                    
+                    // Generate options based on type
+                    let options = [cleanTarget];
+                    
+                    if (type === 'artikel') {
+                        // Add all definite articles except the correct one
+                        const allArticles = ['der', 'die', 'das', 'den', 'dem', 'des', 'die', 'den', 'der'];
+                        const otherArticles = allArticles.filter(a => a !== cleanTarget.toLowerCase());
+                        options.push(...otherArticles);
+                    } else if (type === 'schwierig') {
+                        // Add other long words from the text
+                        const longWords = sentence.split(/\s+/)
+                            .map(w => w.replace(/[.,!?;:"']/g, ''))
+                            .filter(w => w.length > 8 && w !== cleanTarget);
+                        options.push(...longWords.slice(0, 3));
+                        // If not enough, add some default difficult words
+                        if (options.length < 4) {
+                            options.push(...['Verantwortung', 'Entwicklung', 'Wissenschaft'].slice(0, 4 - options.length));
+                        }
+                    } else {
+                        // For other types, add some generic distractors
+                        const genericWords = ['machen', 'haben', 'sein', 'werden', 'gut', 'schlecht', 'groß', 'klein'];
+                        options.push(...genericWords.slice(0, 3));
+                    }
+                    
+                    // Shuffle options
+                    options = options.sort(() => Math.random() - 0.5);
                     
                     clozeTests.push({
                         sentence_id: randomIndex,
                         sentence: blankedSentence,
                         cloze_word: cleanTarget,
-                        pos: 'NOUN', // Default POS tag
-                        lemma: cleanTarget.toLowerCase()
+                        pos: type.toUpperCase(),
+                        lemma: cleanTarget.toLowerCase(),
+                        options: options
                     });
                 }
             }

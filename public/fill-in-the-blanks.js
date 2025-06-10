@@ -7,17 +7,55 @@ let correctAnswers = {};
 let currentBlankIndex = 0;
 let recognition = null;
 let isListening = false;
+let currentExerciseType = 'artikel'; // Default to articles
 
-// German articles to remove
-const ARTICLES = {
-    definite: ['der', 'die', 'das', 'den', 'dem', 'des'],
-    indefinite: ['ein', 'eine', 'einen', 'einem', 'einer', 'eines'],
-    all: [] // Will be populated
+// Word categories for different exercise types
+const WORD_CATEGORIES = {
+    artikel: {
+        name: 'Artikel',
+        words: ['der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem', 'einer', 'eines'],
+        distractors: ['deren', 'dessen', 'denen', 'jeder', 'jede', 'jedes', 'dieser', 'diese', 'dieses'],
+        checkWord: (word, pos) => {
+            const cleanWord = word.toLowerCase().replace(/[.,!?;:'"]/g, '');
+            return WORD_CATEGORIES.artikel.words.includes(cleanWord);
+        }
+    },
+    verben: {
+        name: 'Verben',
+        checkWord: (word, pos, lemma, token) => {
+            // Check POS tag for verbs
+            return pos === 'VERB' || pos === 'AUX';
+        },
+        needsSpacy: true
+    },
+    substantive: {
+        name: 'Substantive',
+        checkWord: (word, pos, lemma, token) => {
+            // Check POS tag for nouns
+            return pos === 'NOUN' || pos === 'PROPN';
+        },
+        needsSpacy: true
+    },
+    schwierig: {
+        name: 'Schwierige Wörter',
+        checkWord: (word, pos, lemma, token) => {
+            // Words longer than 8 characters or compound words
+            return word.length > 8 || word.includes('-');
+        }
+    },
+    spaced: {
+        name: 'Spaced Repetition Wörter',
+        words: [], // Will be populated from user's due words
+        checkWord: (word, pos, lemma) => {
+            // Check if word is in user's spaced repetition list
+            return WORD_CATEGORIES.spaced.words.includes(lemma || word.toLowerCase());
+        },
+        needsUserData: true
+    }
 };
-ARTICLES.all = [...ARTICLES.definite, ...ARTICLES.indefinite];
 
-// Additional distractor articles for level 2
-const DISTRACTOR_ARTICLES = ['deren', 'dessen', 'denen', 'jeder', 'jede', 'jedes', 'dieser', 'diese', 'dieses'];
+// For backward compatibility
+const ARTICLES = WORD_CATEGORIES.artikel;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Check authentication
@@ -39,6 +77,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Setup speech recognition
     setupSpeechRecognition();
+    
+    // Load spaced repetition words if logged in
+    if (authData.authenticated) {
+        loadSpacedRepetitionWords();
+    }
 });
 
 // Load available videos
@@ -73,6 +116,22 @@ function setupEventListeners() {
     // Video selection
     document.getElementById('videoSelect').addEventListener('change', loadVideoContent);
     
+    // Exercise type buttons
+    document.querySelectorAll('.type-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentExerciseType = btn.dataset.type;
+            console.log('Selected exercise type:', currentExerciseType);
+            updateInstructions();
+            
+            // Reload exercise if video is selected
+            if (currentVideo && currentSentences.length > 0) {
+                createExercise();
+            }
+        });
+    });
+    
     // Difficulty level buttons
     document.querySelectorAll('.difficulty-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -97,18 +156,21 @@ function setupEventListeners() {
     }
 }
 
-// Update instructions based on level
+// Update instructions based on level and type
 function updateInstructions() {
     const instructionText = document.getElementById('instructionText');
+    const category = WORD_CATEGORIES[currentExerciseType];
+    const wordType = category.name;
+    
     switch (currentLevel) {
         case 1:
-            instructionText.textContent = 'Ziehen Sie die Artikel in die Lücken.';
+            instructionText.textContent = `Ziehen Sie die ${wordType} in die Lücken.`;
             break;
         case 2:
-            instructionText.textContent = 'Ziehen Sie die richtigen Artikel in die Lücken. Achtung: Es gibt zusätzliche Wörter!';
+            instructionText.textContent = `Ziehen Sie die richtigen ${wordType} in die Lücken. Achtung: Es gibt zusätzliche Wörter!`;
             break;
         case 3:
-            instructionText.textContent = 'Klicken Sie auf eine Lücke und sprechen oder tippen Sie den Artikel.';
+            instructionText.textContent = `Klicken Sie auf eine Lücke und sprechen oder tippen Sie das fehlende Wort.`;
             break;
     }
 }
@@ -134,15 +196,17 @@ async function loadVideoContent() {
             if (sentencesData.success && sentencesData.data.sentences.length > 0) {
                 // Use sentences from database
                 const allSentences = sentencesData.data.sentences.map(s => s.sentence);
-                currentSentences = allSentences.filter(sentence => {
-                    const words = sentence.toLowerCase().split(/\s+/);
-                    return words.some(word => {
-                        const cleanWord = word.replace(/[.,!?;:'"]/g, '');
-                        return ARTICLES.all.includes(cleanWord);
-                    });
-                });
                 
-                console.log('Sentences with articles:', currentSentences.length);
+                // For types that need SpaCy data, we need to process differently
+                if (currentExerciseType === 'artikel' || currentExerciseType === 'schwierig') {
+                    // Can filter without SpaCy data
+                    currentSentences = filterSentencesForType(allSentences, currentExerciseType);
+                } else {
+                    // For verbs, nouns, etc., we need all sentences and will filter during exercise creation
+                    currentSentences = allSentences.filter(s => s.split(/\s+/).length >= 5);
+                }
+                
+                console.log(`Sentences for ${currentExerciseType}:`, currentSentences.length);
                 
                 if (currentSentences.length > 0) {
                     // Load video details for the title
@@ -154,7 +218,7 @@ async function loadVideoContent() {
                     }
                     createExercise();
                 } else {
-                    showError('Keine Sätze mit Artikeln in diesem Video gefunden.');
+                    showError(`Keine Sätze mit ${WORD_CATEGORIES[currentExerciseType].name} in diesem Video gefunden.`);
                 }
                 return;
             }
@@ -180,7 +244,7 @@ async function loadVideoContent() {
             if (currentSentences.length > 0) {
                 createExercise();
             } else {
-                showError('Keine Sätze mit Artikeln gefunden. Bitte wählen Sie ein anderes Video.');
+                showError(`Keine Sätze mit ${WORD_CATEGORIES[currentExerciseType].name} gefunden. Bitte wählen Sie ein anderes Video oder einen anderen Übungstyp.`);
             }
         } else {
             showError('Kein Text für dieses Video verfügbar.');
@@ -198,19 +262,39 @@ function extractSentences(text) {
     
     console.log('Total sentences found:', sentences.length);
     
-    // Filter sentences that contain articles
-    const filtered = sentences.filter(sentence => {
-        const words = sentence.toLowerCase().split(/\s+/);
-        // Clean words and check for articles
-        const hasArticle = words.some(word => {
-            const cleanWord = word.replace(/[.,!?;:'"]/g, '');
-            return ARTICLES.all.includes(cleanWord);
-        });
-        return hasArticle;
-    }).map(s => s.trim());
+    // Filter based on exercise type
+    const filtered = filterSentencesForType(sentences.map(s => s.trim()), currentExerciseType);
     
-    console.log('Sentences with articles:', filtered.length);
+    console.log(`Sentences suitable for ${currentExerciseType}:`, filtered.length);
     return filtered;
+}
+
+// Filter sentences based on exercise type
+function filterSentencesForType(sentences, type) {
+    const category = WORD_CATEGORIES[type];
+    
+    if (type === 'artikel') {
+        // Filter sentences that contain articles
+        return sentences.filter(sentence => {
+            const words = sentence.toLowerCase().split(/\s+/);
+            return words.some(word => {
+                const cleanWord = word.replace(/[.,!?;:'"]/g, '');
+                return category.words.includes(cleanWord);
+            });
+        });
+    } else if (type === 'schwierig') {
+        // All sentences with long words
+        return sentences.filter(sentence => {
+            const words = sentence.split(/\s+/);
+            return words.some(word => {
+                const cleanWord = word.replace(/[.,!?;:'"]/g, '');
+                return cleanWord.length > 8;
+            });
+        });
+    } else {
+        // For other types, we need SpaCy data, so return all sentences
+        return sentences.filter(s => s.split(/\s+/).length >= 5);
+    }
 }
 
 // Create exercise from sentences
@@ -226,11 +310,18 @@ function createExercise() {
     currentBlankIndex = 0;
     
     const processedWords = words.map((word, index) => {
-        // Check if word is an article (case-insensitive)
         const cleanWord = word.toLowerCase().replace(/[.,!?;:'"]/g, '');
         const punctuation = word.match(/[.,!?;:'"]+$/)?.[0] || '';
+        const category = WORD_CATEGORIES[currentExerciseType];
         
-        if (ARTICLES.all.includes(cleanWord)) {
+        // Check if this word should be removed based on exercise type
+        let shouldRemove = false;
+        
+        if (category.checkWord) {
+            shouldRemove = category.checkWord(word, null, null, null);
+        }
+        
+        if (shouldRemove) {
             const blankId = `blank-${currentBlankIndex}`;
             blanks.push({
                 id: blankId,
@@ -318,27 +409,57 @@ function displayExercise() {
 
 // Get options based on difficulty level
 function getOptionsForLevel() {
-    const correctArticles = currentExercise.blanks.map(b => b.correctAnswer);
+    const correctWords = currentExercise.blanks.map(b => b.correctAnswer);
+    const category = WORD_CATEGORIES[currentExerciseType];
     
     if (currentLevel === 1) {
-        // Level 1: Only correct articles (shuffled)
-        return [...new Set(correctArticles)].sort(() => Math.random() - 0.5);
+        // Level 1: Only correct words (shuffled)
+        return [...new Set(correctWords)].sort(() => Math.random() - 0.5);
     } else {
-        // Level 2: Correct articles + distractors
-        const allOptions = [...new Set(correctArticles)];
+        // Level 2: Correct words + distractors
+        const allOptions = [...new Set(correctWords)];
         
-        // Add random distractors
-        const numDistractors = Math.min(correctArticles.length + 2, 5);
-        const availableDistractors = DISTRACTOR_ARTICLES.filter(d => !allOptions.includes(d));
-        
-        for (let i = 0; i < numDistractors && availableDistractors.length > 0; i++) {
-            const randomIndex = Math.floor(Math.random() * availableDistractors.length);
-            allOptions.push(availableDistractors[randomIndex]);
-            availableDistractors.splice(randomIndex, 1);
+        // Add distractors based on type
+        if (currentExerciseType === 'artikel' && category.distractors) {
+            // Use predefined distractors for articles
+            const numDistractors = Math.min(correctWords.length + 2, 5);
+            const availableDistractors = category.distractors.filter(d => !allOptions.includes(d));
+            
+            for (let i = 0; i < numDistractors && availableDistractors.length > 0; i++) {
+                const randomIndex = Math.floor(Math.random() * availableDistractors.length);
+                allOptions.push(availableDistractors[randomIndex]);
+                availableDistractors.splice(randomIndex, 1);
+            }
+        } else {
+            // For other types, generate distractors from vocabulary
+            // This would ideally come from the vocabulary database
+            const distractors = generateDistractorsForType(currentExerciseType, correctWords);
+            allOptions.push(...distractors);
         }
         
         return allOptions.sort(() => Math.random() - 0.5);
     }
+}
+
+// Generate distractors for different word types
+function generateDistractorsForType(type, correctWords) {
+    // This is a simplified version - ideally would use vocabulary from database
+    const distractors = [];
+    
+    switch(type) {
+        case 'verben':
+            distractors.push('machen', 'gehen', 'kommen', 'sehen', 'geben');
+            break;
+        case 'substantive':
+            distractors.push('Mann', 'Frau', 'Kind', 'Haus', 'Auto');
+            break;
+        case 'schwierig':
+            distractors.push('Geschwindigkeit', 'Verantwortung', 'Entwicklung', 'Wissenschaft');
+            break;
+    }
+    
+    // Filter out any that are already in correct words
+    return distractors.filter(d => !correctWords.includes(d)).slice(0, 3);
 }
 
 // Setup drag and drop
@@ -651,3 +772,35 @@ document.getElementById('playButton')?.addEventListener('click', () => {
         speechSynthesis.speak(utterance);
     }
 });
+
+// Load spaced repetition words for the user
+async function loadSpacedRepetitionWords() {
+    try {
+        const response = await fetch('/api/spacy/vocabulary-due?limit=50', {
+            credentials: 'same-origin'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.words) {
+                // Store the words for spaced repetition exercise type
+                WORD_CATEGORIES.spaced.words = data.words.map(w => w.lemma || w.word);
+                console.log('Loaded', WORD_CATEGORIES.spaced.words.length, 'spaced repetition words');
+                
+                // Enable/disable spaced button based on available words
+                const spacedBtn = document.querySelector('[data-type="spaced"]');
+                if (spacedBtn) {
+                    if (WORD_CATEGORIES.spaced.words.length === 0) {
+                        spacedBtn.disabled = true;
+                        spacedBtn.title = 'Keine Wörter zur Wiederholung fällig';
+                    } else {
+                        spacedBtn.disabled = false;
+                        spacedBtn.title = `${WORD_CATEGORIES.spaced.words.length} Wörter zur Wiederholung`;
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error loading spaced repetition words:', error);
+    }
+}

@@ -81,6 +81,9 @@ class VocabularyExercise(BaseModel):
     example_sentences: List[str]
     difficulty_score: float
 
+class ProcessSentenceRequest(BaseModel):
+    text: str
+
 # API Endpoints
 
 @app.get("/")
@@ -235,7 +238,7 @@ async def get_vocabulary(video_id: str, limit: int = 50):
         conn.close()
 
 @app.get("/cloze_tests/{video_id}")
-async def generate_cloze_tests(video_id: str, count: int = 5):
+async def generate_cloze_tests(video_id: str, count: int = 5, type: str = "random"):
     """Generate cloze tests from video sentences"""
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -275,13 +278,45 @@ async def generate_cloze_tests(video_id: str, count: int = 5):
             sent_text = sent_data['sentence']
             doc = nlp(sent_text)
             
-            # Find suitable words to remove (content words)
-            candidates = [
-                token for token in doc 
-                if not token.is_stop and not token.is_punct 
-                and token.pos_ in ['NOUN', 'VERB', 'ADJ']
-                and len(token.text) > 3
-            ]
+            # Find suitable words to remove based on type
+            if type == "artikel":
+                # Articles (only definite articles)
+                candidates = [
+                    token for token in doc
+                    if token.text.lower() in ['der', 'die', 'das', 'den', 'dem', 'des']
+                ]
+            elif type == "verben":
+                # Verbs
+                candidates = [
+                    token for token in doc
+                    if token.pos_ in ['VERB', 'AUX'] and not token.is_punct
+                ]
+            elif type == "substantive":
+                # Nouns
+                candidates = [
+                    token for token in doc
+                    if token.pos_ in ['NOUN', 'PROPN'] and not token.is_punct
+                ]
+            elif type == "adjektive":
+                # Adjectives
+                candidates = [
+                    token for token in doc
+                    if token.pos_ in ['ADJ', 'ADV'] and not token.is_punct
+                ]
+            elif type == "schwierig":
+                # Difficult/long words
+                candidates = [
+                    token for token in doc
+                    if len(token.text) > 8 and not token.is_punct
+                ]
+            else:
+                # Default: content words (original behavior)
+                candidates = [
+                    token for token in doc 
+                    if not token.is_stop and not token.is_punct 
+                    and token.pos_ in ['NOUN', 'VERB', 'ADJ']
+                    and len(token.text) > 3
+                ]
             
             if not candidates:
                 continue
@@ -289,15 +324,31 @@ async def generate_cloze_tests(video_id: str, count: int = 5):
             # Select random word to remove
             target = random.choice(candidates)
             
-            # Generate distractors
+            # Generate distractors based on type
             distractors = []
-            if target.pos_ in vocab_by_pos:
-                same_pos_words = [w for w in vocab_by_pos[target.pos_] 
-                                 if w != target.lemma_]
-                distractors = random.sample(
-                    same_pos_words, 
-                    min(3, len(same_pos_words))
-                )
+            
+            if type == "artikel":
+                # For articles, show all definite articles except the correct one
+                all_articles = ['der', 'die', 'das', 'den', 'dem', 'des', 'die', 'den', 'der']
+                # Remove the correct answer from the list
+                distractors = [art for art in all_articles if art != target.text.lower()]
+            elif type == "verben":
+                # For verbs, find other verbs
+                verb_candidates = [w['lemma'] for w in vocab if w['pos'] == 'VERB' and w['lemma'] != target.lemma_]
+                distractors = random.sample(verb_candidates, min(3, len(verb_candidates))) if verb_candidates else ['machen', 'gehen', 'haben']
+            elif type == "substantive":
+                # For nouns, find other nouns  
+                noun_candidates = [w['lemma'] for w in vocab if w['pos'] == 'NOUN' and w['lemma'] != target.lemma_]
+                distractors = random.sample(noun_candidates, min(3, len(noun_candidates))) if noun_candidates else ['Mann', 'Frau', 'Kind']
+            else:
+                # Default: use same POS words
+                if target.pos_ in vocab_by_pos:
+                    same_pos_words = [w for w in vocab_by_pos[target.pos_] 
+                                     if w != target.lemma_]
+                    distractors = random.sample(
+                        same_pos_words, 
+                        min(3, len(same_pos_words))
+                    ) if same_pos_words else []
             
             # Create cloze sentence
             words = sent_text.split()
@@ -311,7 +362,14 @@ async def generate_cloze_tests(video_id: str, count: int = 5):
             if target_idx is not None:
                 cloze_sentence = " ".join(words)
                 
-                options = [target.text] + distractors
+                # For articles, the distractors list already contains all options
+                if type == "artikel":
+                    # Add the correct answer to the list of all articles
+                    options = [target.text] + distractors
+                else:
+                    # For other types, ensure we have at least 3 distractors
+                    options = [target.text] + distractors
+                
                 random.shuffle(options)
                 
                 cloze_tests.append({
@@ -450,6 +508,31 @@ async def check_grammar(text: str):
         "text": text,
         "issues": issues,
         "is_correct": len(issues) == 0
+    }
+
+@app.post("/process_sentence")
+async def process_sentence(request: ProcessSentenceRequest):
+    """Process a single sentence and return tokens with POS tags"""
+    doc = nlp(request.text)
+    
+    tokens = []
+    for token in doc:
+        if not token.is_space:
+            tokens.append({
+                "text": token.text,
+                "lemma": token.lemma_,
+                "pos": token.pos_,
+                "tag": token.tag_,
+                "dep": token.dep_,
+                "is_stop": token.is_stop,
+                "is_punct": token.is_punct,
+                "index": token.i
+            })
+    
+    return {
+        "text": text,
+        "tokens": tokens,
+        "token_count": len(tokens)
     }
 
 if __name__ == "__main__":

@@ -1115,6 +1115,34 @@ document.addEventListener('DOMContentLoaded', () => {
     window.openDictationModal = openDictationModal;
     window.checkDictationFunction = checkDictation;
     
+    // Open dictation modal for cloze test sentence
+    window.openClozeDictation = async function() {
+        if (!currentClozeTests || currentClozeIndex >= currentClozeTests.length) return;
+        
+        const test = currentClozeTests[currentClozeIndex];
+        const fullSentence = test.original_sentence || test.sentence.replace('_____', test.cloze_word);
+        
+        // Set up dictation modal variables
+        currentFullSentence = fullSentence;
+        currentSelectedText = '';
+        currentVideoId = getVideoId();
+        currentSentenceIndex = test.sentence_id || currentClozeIndex;
+        practiceStartTime = Date.now();
+        
+        // Load user settings to update dictation UI
+        await loadUserSettings();
+        
+        // Open the dictation modal
+        const modal = document.getElementById('dictationModal');
+        const sentenceDisplay = document.getElementById('sentenceDisplay');
+        
+        // Display the full sentence
+        sentenceDisplay.textContent = fullSentence;
+        sentenceDisplay.classList.remove('has-selection');
+        
+        modal.style.display = 'block';
+    };
+    
     // Setup modals
     setupDictationModal();
     setupSpeechRecognition();
@@ -1128,6 +1156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentClozeIndex = 0;
     let clozeScore = 0;
     let clozeAttempts = 0;
+    let currentClozeType = 'artikel'; // Default to artikel
     
     // Load SpaCy Vocabulary
     const loadVocabBtn = document.getElementById('loadVocabBtn');
@@ -2550,6 +2579,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return sentence.replace(regex, `<span style="background-color: yellow; font-weight: bold;">${word}</span>`);
     }
     
+    // Setup cloze type buttons
+    const clozeTypeButtons = document.querySelectorAll('.cloze-type-btn');
+    clozeTypeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update active state
+            clozeTypeButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentClozeType = btn.dataset.type;
+            console.log('Selected cloze type:', currentClozeType);
+        });
+    });
+    
     // Cloze Tests
     const startClozeBtn = document.getElementById('startClozeBtn');
     if (startClozeBtn) {
@@ -2563,7 +2604,8 @@ document.addEventListener('DOMContentLoaded', () => {
             startClozeBtn.style.display = 'none';
             
             try {
-                const response = await fetch(`/api/spacy/cloze-tests/${videoId}?count=5`, {
+                // Add exercise type to the request
+                const response = await fetch(`/api/spacy/cloze-tests/${videoId}?count=5&type=${currentClozeType}`, {
                     credentials: 'same-origin'
                 });
                 
@@ -2604,6 +2646,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('clozeSentence').textContent = test.sentence;
         document.getElementById('currentQuestion').textContent = currentClozeIndex + 1;
         document.getElementById('totalQuestions').textContent = currentClozeTests.length;
+        
+        // Show dictation button when cloze test is displayed
+        const dictationBtn = document.getElementById('clozeDictationBtn');
+        if (dictationBtn) {
+            dictationBtn.style.display = 'inline-block';
+        }
         
         const optionsContainer = document.getElementById('clozeOptions');
         optionsContainer.innerHTML = '';

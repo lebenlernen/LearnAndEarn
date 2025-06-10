@@ -292,6 +292,46 @@
             }
         }
         
+        /* Exercise type selector */
+        .exercise-type-selector {
+            margin-bottom: 20px;
+        }
+        
+        .exercise-type-selector label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .type-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .type-btn {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .type-btn:hover {
+            border-color: #007bff;
+            background: #f0f7ff;
+        }
+        
+        .type-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
         /* Instructions */
         .instructions {
             background: #fff3cd;
@@ -360,7 +400,18 @@
     
     <div class="luecken-container">
         <div class="exercise-header">
-            <h1>Lückentexte - Artikel üben</h1>
+            <h1>Lückentexte</h1>
+            
+            <div class="exercise-type-selector">
+                <label>Übungstyp:</label>
+                <div class="type-buttons">
+                    <button class="type-btn active" data-type="artikel">Artikel</button>
+                    <button class="type-btn" data-type="verben">Verben</button>
+                    <button class="type-btn" data-type="substantive">Substantive</button>
+                    <button class="type-btn" data-type="schwierig">Schwierige Wörter</button>
+                    <button class="type-btn" data-type="spaced">Spaced Repetition</button>
+                </div>
+            </div>
             
             <div class="video-selector">
                 <label for="videoSelect">Video auswählen:</label>
@@ -449,6 +500,6 @@
     
     <script src="auth.js"></script>
     <script src="mobile-menu.js"></script>
-    <script src="fill-in-the-blanks.js"></script>
+    <script src="fill-in-the-blanks.js?v=2"></script>
 </body>
 </html>

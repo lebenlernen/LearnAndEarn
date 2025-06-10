@@ -175,6 +175,20 @@
     <div class="container">
         <div class="section cloze-section">
             <h2>Lückentexte (Cloze Tests)</h2>
+            
+            <!-- Exercise Type Selection -->
+            <div class="cloze-type-selector">
+                <label>Übungstyp wählen:</label>
+                <div class="cloze-type-buttons">
+                    <button class="cloze-type-btn" data-type="random">Zufällig</button>
+                    <button class="cloze-type-btn active" data-type="artikel">Artikel</button>
+                    <button class="cloze-type-btn" data-type="verben">Verben</button>
+                    <button class="cloze-type-btn" data-type="substantive">Substantive</button>
+                    <button class="cloze-type-btn" data-type="adjektive">Adjektive</button>
+                    <button class="cloze-type-btn" data-type="schwierig">Schwierige Wörter</button>
+                </div>
+            </div>
+            
             <div class="cloze-container">
                 <div id="clozeLoading" class="loading-message" style="display: none;">
                     <div class="spinner"></div>
@@ -183,6 +197,11 @@
                 </div>
                 <div id="clozeContent" style="display: none;">
                     <div class="cloze-test" id="clozeTest">
+                        <div class="cloze-dictation-controls">
+                            <button id="clozeDictationBtn" class="btn btn-speech" onclick="openClozeDictation()" style="display: none;">
+                                🎤 Sprechübung
+                            </button>
+                        </div>
                         <p id="clozeSentence" class="cloze-sentence"></p>
                         <div class="cloze-options" id="clozeOptions"></div>
                         <div id="clozeResult" class="cloze-result" style="display: none;"></div>
