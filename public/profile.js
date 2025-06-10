@@ -49,6 +49,9 @@ const loadUserProfile = (user) => {
     if (user.timezone) {
         document.getElementById('timezone').value = user.timezone;
     }
+    if (user.use_system_dictation !== undefined) {
+        document.getElementById('useSystemDictation').checked = user.use_system_dictation;
+    }
 };
 
 // Handle profile update
@@ -65,7 +68,8 @@ const handleProfileUpdate = async (e) => {
     const formData = {
         country: document.getElementById('country').value,
         mother_language: document.getElementById('motherLanguage').value,
-        timezone: document.getElementById('timezone').value
+        timezone: document.getElementById('timezone').value,
+        use_system_dictation: document.getElementById('useSystemDictation').checked
     };
     
     try {

@@ -1,19 +1,106 @@
 // Simple text-to-speech function that works
 const speakText = (text, rate) => {
+    console.log('speakText called with:', text, 'rate:', rate);
+    
     // Cancel any ongoing speech
     speechSynthesis.cancel();
     
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Trim and clean the text
+    const cleanText = text.trim();
+    console.log('Clean text to speak:', cleanText);
+    
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'de-DE'; // German language
     utterance.rate = rate;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
+    
+    // Add event listeners for debugging
+    utterance.onstart = () => {
+        console.log('Speech started for text:', cleanText);
+    };
+    
+    utterance.onend = () => {
+        console.log('Speech ended');
+    };
+    
+    utterance.onerror = (event) => {
+        console.error('Speech error:', event);
+    };
     
     speechSynthesis.speak(utterance);
 };
 
 // Make functions globally available
 window.speakText = speakText;
+
+// Load user settings
+async function loadUserSettings() {
+    try {
+        const authData = await checkAuth();
+        if (authData.authenticated) {
+            // Fetch user profile to get dictation preference
+            const response = await fetch('/api/auth/me');
+            if (response.ok) {
+                const userData = await response.json();
+                window.useSystemDictation = userData.user.use_system_dictation || false;
+                
+                // Update UI based on preference
+                updateDictationUI();
+            }
+        }
+    } catch (error) {
+        console.error('Error loading user settings:', error);
+    }
+}
+
+// Update UI based on dictation preference
+function updateDictationUI() {
+    const transcribedText = document.getElementById('transcribedText');
+    const systemDictationInput = document.getElementById('systemDictationInput');
+    const startButton = document.getElementById('startSpeechButton');
+    const resultLabel = document.querySelector('.result-label');
+    
+    if (window.useSystemDictation) {
+        // Show input field, hide transcribed text
+        if (transcribedText) transcribedText.style.display = 'none';
+        if (systemDictationInput) {
+            systemDictationInput.style.display = 'block';
+            // Clear input when switching modes
+            systemDictationInput.value = '';
+        }
+        if (startButton) {
+            startButton.innerHTML = '<span class="check-icon">✓</span> Text prüfen';
+            // Remove old event listeners and add new one
+            const newStartButton = startButton.cloneNode(true);
+            startButton.parentNode.replaceChild(newStartButton, startButton);
+            newStartButton.onclick = window.checkSystemDictation;
+        }
+        if (resultLabel) resultLabel.textContent = 'Ihr Text:';
+    } else {
+        // Show transcribed text, hide input field
+        if (transcribedText) transcribedText.style.display = 'block';
+        if (systemDictationInput) systemDictationInput.style.display = 'none';
+        if (resultLabel) resultLabel.textContent = 'Ihre Aussprache:';
+        // Speech recognition button already set up
+    }
+}
+
+// Check system dictation input - defined as global to be accessible
+window.checkSystemDictation = function() {
+    const input = document.getElementById('systemDictationInput');
+    if (input && input.value.trim()) {
+        // Call the checkDictation function if it exists
+        if (window.checkDictationFunction) {
+            window.checkDictationFunction(input.value.trim());
+        } else {
+            console.error('checkDictation function not available');
+            alert('Fehler: Die Prüffunktion ist nicht verfügbar. Bitte laden Sie die Seite neu.');
+        }
+    } else {
+        alert('Bitte geben Sie einen Text ein.');
+    }
+}
 
 // Helper function to get video ID
 function getVideoId() {
@@ -94,13 +181,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const embedUrl = `https://www.youtube.com/embed/${video.video_id}`;
         
         videoDetailContainer.innerHTML = `
-            <div class="video-player-container">
-                <iframe 
-                    src="${embedUrl}" 
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen>
-                </iframe>
+            <div class="video-player-wrapper">
+                <div class="video-controls-bar">
+                    <a href="/transcript.html?id=${videoId}" class="transcript-link">
+                        <span class="transcript-icon">📝</span> Transkript anzeigen
+                    </a>
+                </div>
+                <div class="video-player-container">
+                    <iframe 
+                        src="${embedUrl}" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
             </div>
             
             <div class="video-info">
@@ -166,7 +260,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Handle text selection in sentence display
         if (sentenceDisplay) {
-            sentenceDisplay.addEventListener('mouseup', () => {
+            // Function to handle selection
+            const handleTextSelection = () => {
                 const selection = window.getSelection();
                 const selectedText = selection.toString().trim();
                 
@@ -176,9 +271,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentSelectedText = selectedText;
                     // Highlight the selection
                     sentenceDisplay.classList.add('has-selection');
+                    
+                    // Show visual feedback for selection
+                    const selectionInfo = document.createElement('div');
+                    selectionInfo.className = 'selection-info';
+                    selectionInfo.textContent = `Ausgewählt: "${selectedText}"`;
+                    selectionInfo.style.cssText = 'background: #e3f2fd; padding: 10px; margin: 10px 0; border-radius: 6px; font-size: 0.9em; color: #1976d2;';
+                    
+                    // Remove any existing selection info
+                    const existingInfo = document.querySelector('.selection-info');
+                    if (existingInfo) existingInfo.remove();
+                    
+                    // Add new selection info after sentence display
+                    sentenceDisplay.parentNode.insertBefore(selectionInfo, sentenceDisplay.nextSibling);
                 } else {
                     currentSelectedText = '';
                     sentenceDisplay.classList.remove('has-selection');
+                    // Remove selection info
+                    const existingInfo = document.querySelector('.selection-info');
+                    if (existingInfo) existingInfo.remove();
+                }
+            };
+            
+            // Add both mouse and touch event listeners
+            sentenceDisplay.addEventListener('mouseup', handleTextSelection);
+            sentenceDisplay.addEventListener('touchend', () => {
+                // Small delay for touch to allow selection to complete
+                setTimeout(handleTextSelection, 100);
+            });
+            
+            // Also handle selection change event for better mobile support
+            document.addEventListener('selectionchange', () => {
+                if (sentenceDisplay.contains(window.getSelection().anchorNode)) {
+                    handleTextSelection();
                 }
             });
         }
@@ -251,6 +376,22 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Clear previous results
             document.getElementById('comparisonResult').innerHTML = '';
+            
+            // Show what text we're expecting
+            const expectedText = window.currentSelectedText || currentSelectedText || currentFullSentence;
+            console.log('Expecting speech for:', expectedText);
+            
+            // Add visual indicator of expected text
+            const expectedDiv = document.createElement('div');
+            expectedDiv.id = 'expectedTextIndicator';
+            expectedDiv.style.cssText = 'background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin: 10px 0; border-radius: 6px; font-size: 0.9em;';
+            expectedDiv.innerHTML = `<strong>Erwarteter Text:</strong> "${expectedText}"`;
+            
+            const existingIndicator = document.getElementById('expectedTextIndicator');
+            if (existingIndicator) existingIndicator.remove();
+            
+            const speechResult = document.getElementById('speechResult');
+            speechResult.parentNode.insertBefore(expectedDiv, speechResult);
         };
         
         recognition.onend = () => {
@@ -264,6 +405,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (finalText.trim()) {
                 checkDictation(finalText.trim());
             }
+            
+            // Remove expected text indicator after a delay
+            setTimeout(() => {
+                const expectedIndicator = document.getElementById('expectedTextIndicator');
+                if (expectedIndicator) expectedIndicator.remove();
+            }, 3000);
         };
         
         recognition.onresult = (event) => {
@@ -312,18 +459,202 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // Open dictation modal with sentence
-    const openDictationModal = (sentence, sentenceIndex = null) => {
+    const openDictationModal = async (sentence, sentenceIndex = null) => {
         const modal = document.getElementById('dictationModal');
         const sentenceDisplay = document.getElementById('sentenceDisplay');
         
         // Reset modal
         currentFullSentence = sentence;
         currentSelectedText = '';
+        window.currentSelectedText = ''; // Clear window variable too
         currentVideoId = videoId; // Store video ID for tracking
         currentSentenceIndex = sentenceIndex;
         practiceStartTime = Date.now(); // Start timing
         sentenceDisplay.textContent = sentence;
         sentenceDisplay.classList.remove('has-selection');
+        
+        // Load user settings to update dictation UI
+        await loadUserSettings();
+        
+        // Add iOS-specific selection help and alternative selection method
+        if (/iPhone|iPad|iPod/.test(navigator.userAgent) || window.innerWidth <= 768) {
+            const iosHint = document.querySelector('.selection-hint');
+            if (iosHint) {
+                iosHint.innerHTML = '💡 <strong>Tipp:</strong> Erstes Wort antippen = Start, zweites Wort = Ende der Auswahl. Alle Wörter dazwischen werden ausgewählt.';
+            }
+            
+            // Make words clickable for easier selection on mobile
+            const words = sentence.split(' ');
+            sentenceDisplay.innerHTML = words.map((word, i) => 
+                `<span class="clickable-sentence-word" data-index="${i}" style="padding: 4px 2px; cursor: pointer; border: 1px solid transparent;">${word}</span>`
+            ).join(' ');
+            
+            // Add debug info
+            const debugInfo = document.createElement('div');
+            debugInfo.style.cssText = 'position: fixed; top: 10px; right: 10px; background: yellow; padding: 5px; font-size: 12px; z-index: 9999;';
+            debugInfo.textContent = 'Mobile selection active';
+            document.body.appendChild(debugInfo);
+            setTimeout(() => debugInfo.remove(), 3000);
+            
+            // Handle word clicks for selection - continuous selection only
+            let selectionStart = null;
+            let selectionEnd = null;
+            
+            function updateSelection() {
+                // Clear all selections first
+                sentenceDisplay.querySelectorAll('.clickable-sentence-word').forEach((span, idx) => {
+                    span.style.background = '';
+                    span.style.color = '';
+                    span.style.fontWeight = '';
+                });
+                
+                // Apply selection if we have start and end
+                if (selectionStart !== null) {
+                    const start = Math.min(selectionStart, selectionEnd || selectionStart);
+                    const end = Math.max(selectionStart, selectionEnd || selectionStart);
+                    
+                    // Highlight selected range
+                    sentenceDisplay.querySelectorAll('.clickable-sentence-word').forEach((span, idx) => {
+                        if (idx >= start && idx <= end) {
+                            span.style.background = '#1976d2';
+                            span.style.color = 'white';
+                            span.style.fontWeight = 'bold';
+                        }
+                    });
+                    
+                    // Update selected text
+                    const selectedWords = [];
+                    for (let i = start; i <= end; i++) {
+                        selectedWords.push(words[i]);
+                    }
+                    window.currentSelectedText = selectedWords.join(' '); // Use window scope
+                    currentSelectedText = window.currentSelectedText; // Also update local var
+                    
+                    // Show selection info
+                    let selectionInfo = document.querySelector('.selection-info');
+                    if (!selectionInfo) {
+                        selectionInfo = document.createElement('div');
+                        selectionInfo.className = 'selection-info';
+                        sentenceDisplay.parentNode.insertBefore(selectionInfo, sentenceDisplay.nextSibling);
+                    }
+                    selectionInfo.textContent = `Ausgewählt: "${window.currentSelectedText}"`;
+                    selectionInfo.style.cssText = 'background: #e3f2fd; padding: 10px; margin: 10px 0; border-radius: 6px; font-size: 0.9em; color: #1976d2;';
+                    
+                    console.log('Updated selection:', window.currentSelectedText);
+                } else {
+                    // Clear selection
+                    window.currentSelectedText = '';
+                    currentSelectedText = '';
+                    const selectionInfo = document.querySelector('.selection-info');
+                    if (selectionInfo) selectionInfo.remove();
+                }
+            }
+            
+            sentenceDisplay.querySelectorAll('.clickable-sentence-word').forEach(span => {
+                span.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const index = parseInt(this.dataset.index);
+                    
+                    // Visual feedback on tap
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 100);
+                    
+                    if (selectionStart === null) {
+                        // First click - start selection
+                        selectionStart = index;
+                        selectionEnd = index;
+                    } else if (index === selectionStart && selectionEnd === selectionStart) {
+                        // Clicking the same word again - clear selection
+                        selectionStart = null;
+                        selectionEnd = null;
+                    } else {
+                        // Second click - set end of selection
+                        selectionEnd = index;
+                    }
+                    
+                    updateSelection();
+                    
+                    // Update play buttons to use new selection
+                    updatePlayButtons();
+                });
+            });
+        }
+        
+        // Function to update play buttons - define before usage
+        function updatePlayButtons() {
+            const playButton = document.getElementById('playButton');
+            const slowPlayButton = document.getElementById('slowPlayButton');
+            
+            if (playButton) {
+                // Remove all existing event listeners by replacing the button
+                const newPlayButton = playButton.cloneNode(true);
+                playButton.parentNode.replaceChild(newPlayButton, playButton);
+                
+                // Add new event listener
+                newPlayButton.onclick = function() {
+                    // Get selected text from DOM if available
+                    const selectionInfo = document.querySelector('.selection-info');
+                    let selectedFromDOM = '';
+                    if (selectionInfo) {
+                        const match = selectionInfo.textContent.match(/Ausgewählt: "(.+)"/);
+                        if (match) {
+                            selectedFromDOM = match[1];
+                        }
+                    }
+                    
+                    // Use DOM selection or variable (check window scope too)
+                    const selected = selectedFromDOM || window.currentSelectedText || currentSelectedText;
+                    const full = currentFullSentence;
+                    const textToPlay = selected || full;
+                    
+                    console.log('Play button clicked');
+                    console.log('currentSelectedText:', currentSelectedText);
+                    console.log('selectedFromDOM:', selectedFromDOM);
+                    console.log('currentFullSentence:', full);
+                    console.log('Playing:', textToPlay);
+                    
+                    // Debug alert for mobile
+                    alert(`Playing: ${textToPlay}\nWindow var: "${window.currentSelectedText}"\nLocal var: "${currentSelectedText}"\nDOM: "${selectedFromDOM}"\nFull: "${full}"`);
+                    
+                    speakText(textToPlay, 1.0);
+                };
+            }
+            
+            if (slowPlayButton) {
+                // Remove all existing event listeners by replacing the button
+                const newSlowPlayButton = slowPlayButton.cloneNode(true);
+                slowPlayButton.parentNode.replaceChild(newSlowPlayButton, slowPlayButton);
+                
+                // Add new event listener
+                newSlowPlayButton.onclick = function() {
+                    // Get selected text from DOM if available
+                    const selectionInfo = document.querySelector('.selection-info');
+                    let selectedFromDOM = '';
+                    if (selectionInfo) {
+                        const match = selectionInfo.textContent.match(/Ausgewählt: "(.+)"/);
+                        if (match) {
+                            selectedFromDOM = match[1];
+                        }
+                    }
+                    
+                    // Use DOM selection or variable (check window scope too)
+                    const selected = selectedFromDOM || window.currentSelectedText || currentSelectedText;
+                    const full = currentFullSentence;
+                    const textToPlay = selected || full;
+                    
+                    console.log('Slow play button clicked');
+                    console.log('currentSelectedText:', currentSelectedText);
+                    console.log('selectedFromDOM:', selectedFromDOM);
+                    console.log('currentFullSentence:', full);
+                    console.log('Playing slowly:', textToPlay);
+                    
+                    speakText(textToPlay, 0.6);
+                };
+            }
+        }
         
         // Clear previous results
         if (document.getElementById('transcribedText')) {
@@ -335,30 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Re-attach play button event listeners
-        const playButton = document.getElementById('playButton');
-        const slowPlayButton = document.getElementById('slowPlayButton');
-        
-        if (playButton) {
-            // Remove old listener and add new one
-            const newPlayButton = playButton.cloneNode(true);
-            playButton.parentNode.replaceChild(newPlayButton, playButton);
-            newPlayButton.addEventListener('click', () => {
-                const textToPlay = currentSelectedText || currentFullSentence;
-                console.log('Playing text:', textToPlay);
-                speakText(textToPlay, 1.0);
-            });
-        }
-        
-        if (slowPlayButton) {
-            // Remove old listener and add new one
-            const newSlowPlayButton = slowPlayButton.cloneNode(true);
-            slowPlayButton.parentNode.replaceChild(newSlowPlayButton, slowPlayButton);
-            newSlowPlayButton.addEventListener('click', () => {
-                const textToPlay = currentSelectedText || currentFullSentence;
-                console.log('Playing text slowly:', textToPlay);
-                speakText(textToPlay, 0.6);
-            });
-        }
+        updatePlayButtons();
         
         // Check if user is logged in to show history button and load attempt count
         checkAuth().then(authData => {
@@ -416,8 +724,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check dictation answer with color coding
     const checkDictation = (userInput) => {
-        const targetText = currentSelectedText || currentFullSentence;
+        // Use window variable first, then local, then full sentence
+        const targetText = window.currentSelectedText || currentSelectedText || currentFullSentence;
         const comparisonResult = document.getElementById('comparisonResult');
+        
+        console.log('Checking dictation against:', targetText);
+        console.log('Window selected:', window.currentSelectedText);
+        console.log('Local selected:', currentSelectedText);
+        console.log('Full sentence:', currentFullSentence);
         
         // Normalize and split into words
         const normalizeText = (text) => {
@@ -799,6 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.startSpeechRecognition = startSpeechRecognition;
     window.showPracticeHistory = showPracticeHistory;
     window.openDictationModal = openDictationModal;
+    window.checkDictationFunction = checkDictation;
     
     // Setup modals
     setupDictationModal();
@@ -1209,7 +1524,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Open dictation modal for sentences from other videos
-    function openDictationModalForOtherVideo(sentenceText, focusWord) {
+    async function openDictationModalForOtherVideo(sentenceText, focusWord) {
         const modal = document.getElementById('dictationModal');
         const sentenceDisplay = document.getElementById('sentenceDisplay');
         
@@ -1220,6 +1535,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSentenceIndex = null;
         practiceStartTime = Date.now();
         
+        // Load user settings to update dictation UI
+        await loadUserSettings();
+        
         // Highlight the focus word in the sentence
         sentenceDisplay.innerHTML = highlightWordInSentence(sentenceText, focusWord);
         sentenceDisplay.classList.remove('has-selection');
@@ -1228,7 +1546,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Practice sentence from word context
-    window.practiceSentenceFromWord = function(sentenceIndex, focusWord) {
+    window.practiceSentenceFromWord = async function(sentenceIndex, focusWord) {
         if (!window.videoSentences || !window.videoSentences[sentenceIndex]) return;
         
         const sentence = window.videoSentences[sentenceIndex];
@@ -1241,6 +1559,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentVideoId = getVideoId();
         currentSentenceIndex = sentenceIndex;
         practiceStartTime = Date.now();
+        
+        // Load user settings to update dictation UI
+        await loadUserSettings();
         
         // Highlight the focus word in the sentence
         sentenceDisplay.innerHTML = highlightWordInSentence(sentence.sentence, focusWord);
@@ -1501,7 +1822,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Practice a sentence
-    window.practiceSentence = function(index) {
+    window.practiceSentence = async function(index) {
         if (!window.videoSentences || !window.videoSentences[index]) return;
         
         const sentence = window.videoSentences[index];
@@ -1514,6 +1835,9 @@ document.addEventListener('DOMContentLoaded', () => {
         currentVideoId = getVideoId();
         currentSentenceIndex = index;
         practiceStartTime = Date.now();
+        
+        // Load user settings to update dictation UI
+        await loadUserSettings();
         
         sentenceDisplay.textContent = sentence.sentence;
         sentenceDisplay.classList.remove('has-selection');

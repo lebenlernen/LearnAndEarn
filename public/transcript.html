@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="de" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <title>Video Transkript - LearnAndEarn</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="mobile.css">
+    <style>
+        .transcript-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        
+        .video-section {
+            flex: 1;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+        
+        .transcript-section {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        #transcriptContent {
+            position: relative;
+        }
+        
+        .transcript-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .transcript-title {
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        
+        .back-to-video {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .back-to-video:hover {
+            text-decoration: underline;
+        }
+        
+        .subtitle-line {
+            padding: 12px 16px;
+            margin: 4px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            opacity: 1;
+        }
+        
+        .subtitle-line.past {
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        .subtitle-line:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .subtitle-line.active {
+            background-color: #e3f2fd;
+            border-color: #1976d2;
+            font-weight: 500;
+        }
+        
+        .subtitle-time {
+            font-size: 0.85em;
+            color: #666;
+            margin-right: 10px;
+            font-family: monospace;
+        }
+        
+        .subtitle-text {
+            color: #333;
+        }
+        
+        .no-subtitles {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        /* Mobile responsive */
+        @media (max-width: 968px) {
+            .transcript-container {
+                flex-direction: column;
+            }
+            
+            .video-section {
+                position: relative;
+                top: auto;
+                margin-bottom: 20px;
+            }
+            
+            .transcript-section {
+                max-height: none;
+            }
+        }
+        
+        /* Video player responsive */
+        .video-player {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            background: #000;
+        }
+        
+        .video-player iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Loading state */
+        .loading-transcript {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="userHeader" class="user-header" style="display: none;">
+        <div class="nav-links">
+            <a href="/home.html" class="nav-link">Startseite</a>
+            <a href="/search.html" class="nav-link">Videosuche</a>
+            <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
+            <a href="/fill-in-the-blanks.html" class="nav-link">Lückentexte</a>
+            <a href="/questions.html" class="nav-link">Fragen</a>
+            <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
+            <a href="/learning-time.html" class="nav-link">Lernzeit</a>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <span>Welcome, <span class="user-name" id="userName"></span></span>
+                <span class="user-role" id="userRole"></span>
+            </div>
+            <div class="user-actions">
+                <a href="/profile.html">My Profile</a>
+                <button class="logout-button" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="transcript-container">
+        <div class="video-section">
+            <div style="margin-bottom: 10px;">
+                <a href="#" id="backToVideo" class="back-to-video">
+                    ← Zurück zum Video
+                </a>
+            </div>
+            <div id="videoPlayer" class="video-player">
+                <!-- YouTube iframe will be inserted here -->
+            </div>
+        </div>
+        
+        <div class="transcript-section">
+            
+            <div id="transcriptContent">
+                <div class="loading-transcript">
+                    <div class="spinner"></div>
+                    <p>Transkript wird geladen...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="auth.js"></script>
+    <script src="mobile-menu.js"></script>
+    <script src="transcript.js"></script>
+</body>
+</html>

@@ -176,7 +176,7 @@ router.post('/logout', (req, res) => {
 router.get('/me', isAuthenticated, async (req, res) => {
     try {
         const result = await req.db.query(
-            'SELECT id, email, username, is_active, country, mother_language, timezone FROM our_users WHERE id = $1',
+            'SELECT id, email, username, is_active, country, mother_language, timezone, use_system_dictation FROM our_users WHERE id = $1',
             [req.session.userId]
         );
         
@@ -219,7 +219,7 @@ router.get('/me', isAuthenticated, async (req, res) => {
 // Update user profile
 router.put('/profile', isAuthenticated, async (req, res) => {
     try {
-        const { country, mother_language, timezone } = req.body;
+        const { country, mother_language, timezone, use_system_dictation } = req.body;
         const userId = req.session.userId;
         
         // Validate timezone if provided
@@ -235,10 +235,11 @@ router.put('/profile', isAuthenticated, async (req, res) => {
              SET country = $1, 
                  mother_language = $2, 
                  timezone = $3,
+                 use_system_dictation = $4,
                  updated_at = CURRENT_TIMESTAMP
-             WHERE id = $4
-             RETURNING id, email, username, country, mother_language, timezone`,
-            [country, mother_language, timezone, userId]
+             WHERE id = $5
+             RETURNING id, email, username, country, mother_language, timezone, use_system_dictation`,
+            [country, mother_language, timezone, use_system_dictation, userId]
         );
         
         res.json({ 

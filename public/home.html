@@ -6,6 +6,7 @@
   <meta name="google" content="notranslate">
   <title>LearnAndEarn - Deutsch lernen mit YouTube Videos</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="mobile.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
@@ -15,6 +16,8 @@
         <a href="/home.html" class="nav-link active">Startseite</a>
         <a href="/search.html" class="nav-link">Videosuche</a>
         <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
+        <a href="/fill-in-the-blanks.html" class="nav-link">Lückentexte</a>
+        <a href="/questions.html" class="nav-link">Fragen</a>
         <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
         <a href="/learning-time.html" class="nav-link">Lernzeit</a>
       </div>
@@ -31,11 +34,14 @@
     </div>
 
     <div class="hero-section">
+      <div class="login-prompt" id="loginPrompt" style="display: none;">
+        <p>👋 <strong>Willkommen!</strong> Melden Sie sich an, um Ihren Fortschritt zu speichern und alle Funktionen zu nutzen.</p>
+      </div>
       <h1>LearnAndEarn</h1>
       <p>Meistern Sie Deutsch mit spannenden YouTube-Videos und KI-gestützten Lernwerkzeugen</p>
       <div class="cta-buttons">
         <a href="/search.html" class="cta-button cta-primary">Jetzt lernen</a>
-        <a href="/login.html" class="cta-button cta-secondary" id="loginButton">Anmelden / Registrieren</a>
+        <a href="/login.html" class="cta-button cta-primary cta-login" id="loginButton">Anmelden / Registrieren</a>
       </div>
     </div>
 
@@ -104,12 +110,16 @@
   </div>
 
   <script src="auth.js"></script>
+  <script src="mobile-menu.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       await updateAuthUI();
       const authData = await checkAuth();
       if (authData.authenticated) {
         document.getElementById('loginButton').style.display = 'none';
+        document.getElementById('loginPrompt').style.display = 'none';
+      } else {
+        document.getElementById('loginPrompt').style.display = 'block';
       }
       
       // Translation detection and prevention

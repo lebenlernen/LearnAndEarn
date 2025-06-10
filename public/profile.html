@@ -7,6 +7,7 @@
     <title>Mein Profil - LearnAndEarn</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="mobile.css">
     <style>
         .profile-container {
             max-width: 600px;
@@ -32,7 +33,8 @@
             color: #333;
         }
         
-        .form-group input,
+        .form-group input[type="text"],
+        .form-group input[type="email"],
         .form-group select {
             width: 100%;
             padding: 10px;
@@ -43,6 +45,50 @@
         
         .form-group select {
             cursor: pointer;
+        }
+        
+        /* Checkbox styling */
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-top: 3px;
+            cursor: pointer;
+        }
+        
+        .checkbox-group label {
+            display: flex;
+            align-items: flex-start;
+            cursor: pointer;
+            margin-bottom: 0;
+        }
+        
+        .checkbox-label-text {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .checkbox-label-text small {
+            margin-top: 5px;
+            color: #666;
+            font-weight: normal;
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .profile-container {
+                margin: 20px auto;
+                padding: 20px;
+            }
+            
+            /* Ensure proper spacing on mobile */
+            .container {
+                padding-top: 80px; /* Space for fixed header */
+            }
         }
         
         .profile-info {
@@ -92,12 +138,15 @@
 </head>
 <body>
     <div id="userHeader" class="user-header" style="display: none;">
-                    <div class="nav-links">
-                <a href="/home.html" class="nav-link">Home</a>
-                <a href="/search.html" class="nav-link">Video Search</a>
-                <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
-                <a href="/progress.html" class="nav-link">My Progress</a>
-            </div>
+        <div class="nav-links">
+            <a href="/home.html" class="nav-link">Startseite</a>
+            <a href="/search.html" class="nav-link">Videosuche</a>
+            <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
+            <a href="/fill-in-the-blanks.html" class="nav-link">Lückentexte</a>
+            <a href="/questions.html" class="nav-link">Fragen</a>
+            <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
+            <a href="/learning-time.html" class="nav-link">Lernzeit</a>
+        </div>
         <div class="user-menu">
             <div class="user-info">
                 <span>Welcome, <span class="user-name" id="userName"></span></span>
@@ -187,6 +236,16 @@
                     </select>
                 </div>
                 
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="useSystemDictation" name="useSystemDictation">
+                    <label for="useSystemDictation">
+                        <div class="checkbox-label-text">
+                            <span>System Diktat benutzen</span>
+                            <small>Verwenden Sie die System-Diktierfunktion anstatt der integrierten Spracherkennung</small>
+                        </div>
+                    </label>
+                </div>
+                
                 <button type="submit" class="btn-save">Profil speichern</button>
             </form>
             
@@ -198,6 +257,7 @@
     </div>
     
     <script src="auth.js"></script>
+    <script src="mobile-menu.js"></script>
     <script src="profile.js"></script>
 </body>
 </html> 

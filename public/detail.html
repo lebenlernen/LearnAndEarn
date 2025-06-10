@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="mobile.css">
     <style>
         /* Prevent text selection on learning content */
         .notranslate {
@@ -37,10 +38,13 @@
 <body>
     <div id="userHeader" class="user-header" style="display: none;">
                     <div class="nav-links">
-                <a href="/home.html" class="nav-link">Home</a>
-                <a href="/search.html" class="nav-link">Video Search</a>
+                <a href="/home.html" class="nav-link">Startseite</a>
+                <a href="/search.html" class="nav-link">Videosuche</a>
                 <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
-                <a href="/progress.html" class="nav-link">My Progress</a>
+                <a href="/fill-in-the-blanks.html" class="nav-link">Lückentexte</a>
+                <a href="/questions.html" class="nav-link">Fragen</a>
+                <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
+                <a href="/learning-time.html" class="nav-link">Lernzeit</a>
             </div>
         <div class="user-menu">
             <div class="user-info">
@@ -91,6 +95,12 @@
                 </button>
             </div>
             
+            <div id="speechResult" class="speech-result">
+                <p class="result-label">Ihre Aussprache:</p>
+                <div id="transcribedText" class="transcribed-text"></div>
+                <textarea id="systemDictationInput" class="system-dictation-input" placeholder="Tippen Sie hier Ihren Text ein..." style="display: none; width: 100%; min-height: 60px; padding: 10px; font-size: 1.1em; border: 1px solid #e0e0e0; border-radius: 6px; resize: vertical;"></textarea>
+            </div>
+            
             <div class="speech-controls">
                 <button id="startSpeechButton" class="speech-button">
                     <span class="mic-icon">🎤</span> Sprechen beginnen
@@ -99,11 +109,6 @@
                     <span class="pulse"></span>
                     Zuhören...
                 </div>
-            </div>
-            
-            <div id="speechResult" class="speech-result">
-                <p class="result-label">Ihre Aussprache:</p>
-                <div id="transcribedText" class="transcribed-text"></div>
             </div>
             
             <div id="comparisonResult" class="comparison-result"></div>
@@ -198,6 +203,38 @@
         </div>
     </div>
     
+    <!-- Fragen Section -->
+    <div class="container">
+        <div class="section questions-section">
+            <h2>Fragen (Questions)</h2>
+            <div class="questions-container">
+                <div id="questionsLoading" class="loading-message" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Generating questions...</p>
+                    <p class="loading-detail">Creating comprehension questions from video content...</p>
+                </div>
+                <div id="questionsContent" style="display: none;">
+                    <div class="question-test" id="questionTest">
+                        <p id="questionText" class="question-text"></p>
+                        <div class="question-options" id="questionOptions"></div>
+                        <div id="questionResult" class="question-result" style="display: none;"></div>
+                        <button id="nextQuestionBtn" class="btn btn-secondary" style="display: none;">Next Question</button>
+                    </div>
+                    <div class="question-stats">
+                        <span>Question <span id="currentQuestionNum">1</span> of <span id="totalQuestionsNum">5</span></span>
+                        <span>Score: <span id="questionScore">0</span>/<span id="questionAttempts">0</span></span>
+                    </div>
+                </div>
+                <div id="questionsPlaceholder" class="placeholder-text">
+                    Click "Start Questions" to practice with comprehension questions.
+                </div>
+                <button class="btn btn-primary" id="startQuestionsBtn">
+                    Start Questions
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Practice History Modal -->
     <div id="historyModal" class="history-modal" style="display: none;">
         <div class="history-content">
@@ -217,6 +254,7 @@
     </div>
     
     <script src="auth.js"></script>
+    <script src="mobile-menu.js"></script>
     <script src="activity-monitor.js"></script>
     <script src="detail.js"></script>
 </body>
