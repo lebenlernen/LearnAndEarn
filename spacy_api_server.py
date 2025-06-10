@@ -245,7 +245,7 @@ async def generate_cloze_tests(video_id: str, count: int = 5):
         cur.execute("""
             SELECT sentence FROM our_video_sentences
             WHERE video_id = %s
-            AND word_count BETWEEN 7 AND 20
+            AND LENGTH(sentence) > 50  -- At least 50 characters
             ORDER BY RANDOM()
             LIMIT %s
         """, (video_id, count * 2))  # Get extra for filtering

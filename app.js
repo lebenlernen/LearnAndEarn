@@ -206,6 +206,7 @@ app.get('/api/videos/:videoId', optionalAuth, async (req, res) => {
                 v.duration,
                 v.views,
                 v.subtitle,
+                v.pure_subtitle,
                 COALESCE(vs.summary, v.pure_subtitle, 'No summary available.') as summary
             FROM our_videos v
             LEFT JOIN our_video_summary vs ON v.id = vs.video

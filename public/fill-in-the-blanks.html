@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="de" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <title>Lückentexte - LearnAndEarn</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="mobile.css">
+    <style>
+        .luecken-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        
+        .exercise-header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .difficulty-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .difficulty-btn {
+            padding: 10px 20px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .difficulty-btn:hover {
+            border-color: #007bff;
+            background: #f0f7ff;
+        }
+        
+        .difficulty-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .video-selector {
+            margin-bottom: 20px;
+        }
+        
+        .video-selector select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .exercise-area {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            min-height: 400px;
+        }
+        
+        .sentence-exercise {
+            font-size: 1.2em;
+            line-height: 2;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 6px;
+        }
+        
+        .blank-space {
+            display: inline-block;
+            min-width: 80px;
+            padding: 5px 10px;
+            margin: 0 5px;
+            border: 2px dashed #007bff;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            vertical-align: middle;
+        }
+        
+        .blank-space:hover {
+            background: #f0f7ff;
+        }
+        
+        .blank-space.filled {
+            border-style: solid;
+            background: #e3f2fd;
+        }
+        
+        .blank-space.correct {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+        
+        .blank-space.incorrect {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+        
+        .options-area {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 6px;
+            min-height: 80px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .draggable-word {
+            display: inline-block;
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            cursor: move;
+            user-select: none;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .draggable-word:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: #007bff;
+        }
+        
+        .draggable-word.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        
+        .draggable-word.used {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-check {
+            background: #4caf50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-check:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+        
+        .btn-next {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-next:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        .btn-reset {
+            background: #666;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .btn-reset:hover {
+            background: #555;
+            transform: translateY(-1px);
+        }
+        
+        .score-display {
+            text-align: center;
+            font-size: 1.2em;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0f7ff;
+            border-radius: 6px;
+        }
+        
+        .feedback-message {
+            text-align: center;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            display: none;
+        }
+        
+        .feedback-message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            display: block;
+        }
+        
+        .feedback-message.error {
+            background: #ffebee;
+            color: #c62828;
+            display: block;
+        }
+        
+        /* Level 3 specific styles */
+        .dictation-input-area {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .dictation-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        
+        .dictation-btn {
+            background: #9c27b0;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .dictation-btn:hover {
+            background: #7b1fa2;
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .sentence-exercise {
+                font-size: 1.1em;
+                padding: 15px;
+            }
+            
+            .blank-space {
+                min-width: 60px;
+                margin: 3px;
+            }
+            
+            .draggable-word {
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+        }
+        
+        /* Instructions */
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #856404;
+        }
+        
+        .level-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #007bff;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="userHeader" class="user-header" style="display: none;">
+        <div class="nav-links">
+            <a href="/home.html" class="nav-link">Startseite</a>
+            <a href="/search.html" class="nav-link">Videosuche</a>
+            <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
+            <a href="/fill-in-the-blanks.html" class="nav-link active">Lückentexte</a>
+            <a href="/questions.html" class="nav-link">Fragen</a>
+            <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
+            <a href="/learning-time.html" class="nav-link">Lernzeit</a>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <span>Welcome, <span class="user-name" id="userName"></span></span>
+                <span class="user-role" id="userRole"></span>
+            </div>
+            <div class="user-actions">
+                <a href="/profile.html">My Profile</a>
+                <button class="logout-button" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="luecken-container">
+        <div class="exercise-header">
+            <h1>Lückentexte - Artikel üben</h1>
+            
+            <div class="video-selector">
+                <label for="videoSelect">Video auswählen:</label>
+                <select id="videoSelect">
+                    <option value="">Lade Videos...</option>
+                </select>
+            </div>
+            
+            <div class="difficulty-selector">
+                <button class="difficulty-btn active" data-level="1">
+                    Level 1 - Nur fehlende Wörter
+                </button>
+                <button class="difficulty-btn" data-level="2">
+                    Level 2 - Mit zusätzlichen Wörtern
+                </button>
+                <button class="difficulty-btn" data-level="3">
+                    Level 3 - Ohne Hilfe (Diktat)
+                </button>
+            </div>
+        </div>
+        
+        <div class="exercise-area">
+            <div class="instructions">
+                <strong>Anleitung:</strong> <span id="instructionText">Ziehen Sie die Artikel in die Lücken.</span>
+                <span class="level-badge">Level <span id="currentLevel">1</span></span>
+            </div>
+            
+            <div id="exerciseContent">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Wählen Sie ein Video aus...</p>
+                </div>
+            </div>
+            
+            <div class="feedback-message" id="feedbackMessage"></div>
+            
+            <div class="control-buttons" id="controlButtons" style="display: none;">
+                <button class="btn-reset" onclick="resetExercise()">Zurücksetzen</button>
+                <button class="btn-check" onclick="checkAnswers()">Überprüfen</button>
+                <button class="btn-next" onclick="nextExercise()" style="display: none;">Nächste Übung</button>
+            </div>
+            
+            <div class="score-display" id="scoreDisplay" style="display: none;">
+                Richtig: <span id="correctCount">0</span> / <span id="totalCount">0</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dictation Modal (reused from detail page) -->
+    <div id="dictationModal" class="dictation-modal" style="display: none;">
+        <div class="dictation-content">
+            <span class="close-button">&times;</span>
+            <h2>Artikel diktieren</h2>
+            
+            <div class="sentence-container">
+                <div id="sentenceDisplay" class="sentence-display"></div>
+                <p class="selection-hint">Sprechen Sie den fehlenden Artikel.</p>
+            </div>
+            
+            <div class="dictation-controls">
+                <button id="playButton" class="control-button">
+                    <span class="play-icon">▶</span> Satz anhören
+                </button>
+            </div>
+            
+            <div id="speechResult" class="speech-result">
+                <p class="result-label">Ihre Eingabe:</p>
+                <div id="transcribedText" class="transcribed-text"></div>
+            </div>
+            
+            <div class="speech-controls">
+                <button id="startSpeechButton" class="speech-button">
+                    <span class="mic-icon">🎤</span> Sprechen beginnen
+                </button>
+                <div id="listeningIndicator" class="listening-indicator" style="display: none;">
+                    <span class="pulse"></span>
+                    Zuhören...
+                </div>
+            </div>
+            
+            <div class="dictation-buttons">
+                <button class="btn btn-primary" onclick="submitDictation()">Übernehmen</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="auth.js"></script>
+    <script src="mobile-menu.js"></script>
+    <script src="fill-in-the-blanks.js"></script>
+</body>
+</html>

@@ -310,11 +310,13 @@ router.get('/cloze-tests/:videoId', isAuthenticated, async (req, res) => {
         const { videoId } = req.params; // This is the internal ID
         const { count = 5 } = req.query;
         
-        // First, get the YouTube video_id
+        // First, get the YouTube video_id and summary
         const videoQuery = `
-            SELECT video_id 
-            FROM our_videos 
-            WHERE id = $1
+            SELECT v.video_id, v.title, 
+                   COALESCE(vs.summary, v.pure_subtitle, '') as summary
+            FROM our_videos v
+            LEFT JOIN our_video_summary vs ON v.id = vs.video
+            WHERE v.id = $1
         `;
         const videoResult = await req.db.query(videoQuery, [videoId]);
         
@@ -326,22 +328,84 @@ router.get('/cloze-tests/:videoId', isAuthenticated, async (req, res) => {
         }
         
         const youtubeVideoId = videoResult.rows[0].video_id;
+        const summary = videoResult.rows[0].summary;
         console.log('Generating cloze tests for YouTube video:', youtubeVideoId);
         
-        const response = await axios.get(
-            `${SPACY_API_URL}/cloze_tests/${youtubeVideoId}?count=${count}`
-        );
-        
-        res.json({
-            success: true,
-            data: response.data
-        });
+        try {
+            // Try SpaCy API first
+            const response = await axios.get(
+                `${SPACY_API_URL}/cloze_tests/${youtubeVideoId}?count=${count}`
+            );
+            
+            res.json({
+                success: true,
+                data: response.data
+            });
+        } catch (spacyError) {
+            console.log('SpaCy API not available, using fallback cloze test generation');
+            
+            // Fallback: Generate simple cloze tests from summary
+            if (!summary) {
+                return res.json({
+                    success: true,
+                    data: { cloze_tests: [], count: 0 }
+                });
+            }
+            
+            // Extract sentences
+            const sentences = summary
+                .split(/[.!?]+/)
+                .map(s => s.trim())
+                .filter(s => s.length > 20 && s.split(/\s+/).length > 4);
+            
+            // Generate cloze tests
+            const clozeTests = [];
+            const usedSentences = new Set();
+            
+            while (clozeTests.length < count && usedSentences.size < sentences.length) {
+                const randomIndex = Math.floor(Math.random() * sentences.length);
+                if (usedSentences.has(randomIndex)) continue;
+                
+                usedSentences.add(randomIndex);
+                const sentence = sentences[randomIndex];
+                const words = sentence.split(/\s+/);
+                
+                // Find content words (skip articles, prepositions, etc.)
+                const contentWords = words.filter(word => {
+                    const clean = word.toLowerCase().replace(/[.,!?;:"']/g, '');
+                    return clean.length > 3 && 
+                           !['der', 'die', 'das', 'und', 'oder', 'aber', 'weil', 'dass', 'mit', 'von', 'für', 'auf', 'bei', 'nach', 'vor', 'über', 'unter'].includes(clean);
+                });
+                
+                if (contentWords.length > 0) {
+                    const targetWord = contentWords[Math.floor(Math.random() * contentWords.length)];
+                    const cleanTarget = targetWord.replace(/[.,!?;:"']/g, '');
+                    const blankedSentence = sentence.replace(targetWord, '_____');
+                    
+                    clozeTests.push({
+                        sentence_id: randomIndex,
+                        sentence: blankedSentence,
+                        cloze_word: cleanTarget,
+                        pos: 'NOUN', // Default POS tag
+                        lemma: cleanTarget.toLowerCase()
+                    });
+                }
+            }
+            
+            res.json({
+                success: true,
+                data: {
+                    cloze_tests: clozeTests,
+                    count: clozeTests.length
+                }
+            });
+        }
         
     } catch (error) {
         console.error('Error generating cloze tests:', error);
         res.status(500).json({
             success: false,
-            error: error.response?.data?.detail || 'Failed to generate cloze tests'
+            error: error.message || 'Failed to generate cloze tests'
         });
     }
 });
