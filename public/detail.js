@@ -284,6 +284,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // Add new selection info after sentence display
                     sentenceDisplay.parentNode.insertBefore(selectionInfo, sentenceDisplay.nextSibling);
+                    
+                    // Auto-focus on system dictation input if using system dictation
+                    if (window.useSystemDictation) {
+                        const systemInput = document.getElementById('systemDictationInput');
+                        if (systemInput) {
+                            // Use setTimeout to ensure the selection is complete
+                            setTimeout(() => {
+                                systemInput.focus();
+                                // Don't select all text to preserve any existing input
+                            }, 150);
+                        }
+                    }
                 } else {
                     currentSelectedText = '';
                     sentenceDisplay.classList.remove('has-selection');
@@ -337,6 +349,50 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Setup history modal
         setupHistoryModal();
+        
+        // Add idle focus listener for system dictation
+        let idleFocusTimer = null;
+        const systemDictationInput = document.getElementById('systemDictationInput');
+        
+        if (systemDictationInput) {
+            // Function to check and refocus
+            const checkAndRefocus = () => {
+                if (window.useSystemDictation && 
+                    modal.style.display === 'block' && 
+                    (window.currentSelectedText || currentSelectedText) && 
+                    document.activeElement !== systemDictationInput) {
+                    systemDictationInput.focus();
+                    console.log('Refocused system dictation input');
+                }
+            };
+            
+            // Listen for blur events on the input
+            systemDictationInput.addEventListener('blur', () => {
+                if (window.useSystemDictation && modal.style.display === 'block') {
+                    // Clear any existing timer
+                    if (idleFocusTimer) clearTimeout(idleFocusTimer);
+                    
+                    // Set a new timer to refocus after a short delay
+                    idleFocusTimer = setTimeout(checkAndRefocus, 500);
+                }
+            });
+            
+            // Also check focus periodically when modal is open
+            const focusInterval = setInterval(() => {
+                if (modal.style.display === 'block') {
+                    checkAndRefocus();
+                }
+            }, 2000); // Check every 2 seconds
+            
+            // Clean up interval when modal closes
+            const closeButton = modal.querySelector('.close-button');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => {
+                    clearInterval(focusInterval);
+                    if (idleFocusTimer) clearTimeout(idleFocusTimer);
+                });
+            }
+        }
     };
     
     // Speech recognition setup
@@ -541,6 +597,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectionInfo.style.cssText = 'background: #e3f2fd; padding: 10px; margin: 10px 0; border-radius: 6px; font-size: 0.9em; color: #1976d2;';
                     
                     console.log('Updated selection:', window.currentSelectedText);
+                    
+                    // Auto-focus on system dictation input if using system dictation
+                    if (window.useSystemDictation) {
+                        const systemInput = document.getElementById('systemDictationInput');
+                        if (systemInput) {
+                            // Use setTimeout to ensure the selection is complete
+                            setTimeout(() => {
+                                systemInput.focus();
+                                // Don't select all text to preserve any existing input
+                            }, 150);
+                        }
+                    }
                 } else {
                     // Clear selection
                     window.currentSelectedText = '';
@@ -616,9 +684,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('currentFullSentence:', full);
                     console.log('Playing:', textToPlay);
                     
-                    // Debug alert for mobile
-                    alert(`Playing: ${textToPlay}\nWindow var: "${window.currentSelectedText}"\nLocal var: "${currentSelectedText}"\nDOM: "${selectedFromDOM}"\nFull: "${full}"`);
-                    
                     speakText(textToPlay, 1.0);
                 };
             }
@@ -685,6 +750,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Show modal
         modal.style.display = 'block';
+        
+        // Focus on system dictation input if using system dictation
+        if (window.useSystemDictation) {
+            const systemInput = document.getElementById('systemDictationInput');
+            if (systemInput) {
+                setTimeout(() => {
+                    systemInput.focus();
+                    systemInput.select(); // Select all text for easy replacement
+                }, 100);
+            }
+        }
     };
     
     // Load attempt count for a sentence
@@ -1141,6 +1217,17 @@ document.addEventListener('DOMContentLoaded', () => {
         sentenceDisplay.classList.remove('has-selection');
         
         modal.style.display = 'block';
+        
+        // Focus on system dictation input if using system dictation
+        if (window.useSystemDictation) {
+            const systemInput = document.getElementById('systemDictationInput');
+            if (systemInput) {
+                setTimeout(() => {
+                    systemInput.focus();
+                    systemInput.select(); // Select all text for easy replacement
+                }, 100);
+            }
+        }
     };
     
     // Setup modals
@@ -1872,6 +1959,17 @@ document.addEventListener('DOMContentLoaded', () => {
         sentenceDisplay.classList.remove('has-selection');
         
         modal.style.display = 'block';
+        
+        // Focus on system dictation input if using system dictation
+        if (window.useSystemDictation) {
+            const systemInput = document.getElementById('systemDictationInput');
+            if (systemInput) {
+                setTimeout(() => {
+                    systemInput.focus();
+                    systemInput.select(); // Select all text for easy replacement
+                }, 100);
+            }
+        }
     };
     
     // Practice word from word selection mode

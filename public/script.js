@@ -11,10 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastSearchQuery = '';
     let selectedCategory = '';
     
-    // Feature filters
-    const filterVocabulary = document.getElementById('filterVocabulary');
-    const filterClozeTest = document.getElementById('filterClozeTest');
-    const filterQuestions = document.getElementById('filterQuestions');
     
     // Check authentication and update UI
     async function updateAuthUI() {
@@ -87,10 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 page: currentPage
             });
             
-            // Add feature filters
-            if (filterVocabulary.checked) params.append('hasVocabulary', 'true');
-            if (filterClozeTest.checked) params.append('hasClozeTest', 'true');
-            if (filterQuestions.checked) params.append('hasQuestions', 'true');
             
             const response = await fetch(`/api/videos/search?${params}`);
             if (!response.ok) {
@@ -151,17 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3>${decodedTitle}</h3>
                 <p>${decodedDescription.substring(0, 150)}${decodedDescription.length > 150 ? '...' : ''}</p>
                 ${video._type ? `<span class="video-category">${video._type}</span>` : ''}
-                <div class="feature-indicators">
-                    <span class="feature-indicator ${video.hasVocabulary ? '' : 'inactive'}">
-                        <span class="checkmark">✓</span> Vokabeln
-                    </span>
-                    <span class="feature-indicator ${video.hasClozeTest ? '' : 'inactive'}">
-                        <span class="checkmark">✓</span> Lückentexte
-                    </span>
-                    <span class="feature-indicator ${video.hasQuestions ? '' : 'inactive'}">
-                        <span class="checkmark">✓</span> Questions
-                    </span>
-                </div>
             </div>
         `;
         
@@ -217,14 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Add event listeners for filter checkboxes
-    [filterVocabulary, filterClozeTest, filterQuestions].forEach(filter => {
-        filter.addEventListener('change', () => {
-            if (lastSearchQuery || selectedCategory) {
-                performSearch(1);
-            }
-        });
-    });
     
     // Perform initial search if there's a query in the input
     if (searchInput.value.trim()) {
