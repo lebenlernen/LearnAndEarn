@@ -28,6 +28,8 @@
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.16.0"
+    "openai": "^5.3.0",
+    "pg": "^8.16.0",
+    "youtube-transcript": "^1.2.1"
   }
 }

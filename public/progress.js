@@ -24,9 +24,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Show progress content
     progressContent.style.display = 'block';
     
+    // Load user profile data
+    loadUserProfile();
+    
     // Load statistics
     loadUserStatistics();
 });
+
+// Load user profile data
+const loadUserProfile = async () => {
+    try {
+        const response = await fetch('/api/auth/me', {
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to load profile');
+        }
+        
+        const data = await response.json();
+        
+        // Update profile display - data is nested under 'user' property
+        if (data.user) {
+            document.getElementById('userCountry').textContent = data.user.country || '-';
+            document.getElementById('userMotherLanguage').textContent = data.user.mother_language || '-';
+            document.getElementById('userTimezone').textContent = data.user.timezone || '-';
+        }
+        
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        // Keep default values if profile loading fails
+    }
+};
 
 // Format time from seconds to readable format
 const formatTime = (seconds) => {

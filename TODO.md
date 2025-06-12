@@ -20,12 +20,13 @@ This document outlines the tasks required to migrate the LearnAndEarn Odoo proje
 #### Core Principle: "Always Speaking" - ALL interactions must support speech input/output
 
 #### Database Design Tasks
-- [ ] Analyze existing tables:
-  - [ ] `our_word_list` - unique base words per video (video_id, words)
-  - [ ] `our_vocabulary_list` - master vocabulary with translations
+- [x] Analyze existing tables:
+  - [x] `our_videos_base_words` - unique base words per video with SpaCy analysis
+  - [x] `our_vocabulary_practice` - SRS tracking for user progress
+- [x] Added `language_target` column to `our_videos_base_words` table
 - [ ] Design solution for polysemous words (e.g., "Bank" = financial/bench)
-- [ ] Create word-video frequency tracking table
-- [ ] Design SRS tracking tables for user progress
+- [x] Create word-video frequency tracking table (exists in base_words)
+- [x] Design SRS tracking tables for user progress (our_vocabulary_practice)
 
 #### Two Learning Modes
 - [ ] **Word Mode**: Individual vocabulary with speech
@@ -112,14 +113,32 @@ This document outlines the tasks required to migrate the LearnAndEarn Odoo proje
 - Inter font family
 - Improved color scheme and styling
 - Admin panel accessible from profile page
+- Removed feature checkmarks from search page (January 2025)
+- Changed category filter to "Alles" (January 2025)
+- Auto-focus system dictation input when text selected (January 2025)
+- Added dictation button to cloze test sentences (January 2025)
+- Added Enter key support for system dictation submission (January 2025)
+- Fixed text selection with 5-second pause mechanism (January 2025)
+- Added line breaks after punctuation in dictation sentences (January 2025)
 
 ## Medium Priority
 
-- [ ] Implement Lückentexte (Cloze Tests) with speech input
+- [x] Implement Lückentexte (Cloze Tests) with SpaCy - completed with exercise type selection
+- [ ] Add speech input to Lückentexte exercises
 - [ ] Implement Questions feature with speech answers
-- [ ] Fix database migration for country, mother_language, timezone fields
+- [x] Fix database migration for country, mother_language, timezone fields
 - [ ] Implement backend for feature filters (hasVocabulary, hasClozeTest, hasQuestions)
 - [ ] Design the new Node.js application architecture, considering the existing Odoo functionalities.
+- [x] Prepare Multi-Language Support Infrastructure:
+    - [x] Updated database: Added language_target to our_videos_base_words (655,374 words updated)
+    - [x] Created multi-language SpaCy API example (spacy_api_server_multilang_example.py)
+    - [x] Created language checker script (scripts/check_spacy_languages.py)
+    - [x] Documented SpaCy's 70+ language support capability
+- [ ] Implement Multi-Language Support:
+    - [ ] Install additional SpaCy models (en, es, fr, it)
+    - [ ] Update API to handle multiple languages
+    - [ ] Add language selector to UI
+    - [ ] Adapt exercises for different languages
 - [ ] Implement YouTube integration:
     - [ ] Extract transcripts from YouTube videos.
     - [ ] Create learning materials based on video content.

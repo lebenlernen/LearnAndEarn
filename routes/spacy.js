@@ -826,4 +826,108 @@ router.get('/sentences-by-word/:word', isAuthenticated, async (req, res) => {
     }
 });
 
+// Get sentence tokens for enhanced Lückentexte
+router.get('/sentence-tokens/:sentenceId', isAuthenticated, async (req, res) => {
+    try {
+        const { sentenceId } = req.params;
+        
+        // Fetch tokens for the sentence
+        const query = `
+            SELECT 
+                id,
+                sentence_id,
+                token_index,
+                text,
+                text_lower,
+                lemma,
+                pos,
+                tag,
+                dep,
+                is_stop,
+                is_punct,
+                is_space
+            FROM our_video_sentence_tokens
+            WHERE sentence_id = $1
+            ORDER BY token_index
+        `;
+        
+        const result = await req.db.query(query, [sentenceId]);
+        
+        if (result.rows.length === 0) {
+            return res.json({
+                success: false,
+                message: 'No tokens found for this sentence'
+            });
+        }
+        
+        res.json({
+            success: true,
+            tokens: result.rows
+        });
+        
+    } catch (error) {
+        console.error('Error fetching sentence tokens:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch sentence tokens'
+        });
+    }
+});
+
+// Get random words by POS tag for distractors
+router.get('/random-words/:pos', isAuthenticated, async (req, res) => {
+    try {
+        const { pos } = req.params;
+        const limit = parseInt(req.query.limit) || 10;
+        const exclude = req.query.exclude ? req.query.exclude.split(',') : [];
+        
+        let posFilter = '';
+        switch(pos.toLowerCase()) {
+            case 'verb':
+                posFilter = "AND pos IN ('VERB', 'AUX')";
+                break;
+            case 'noun':
+                posFilter = "AND pos IN ('NOUN', 'PROPN')";
+                break;
+            case 'adj':
+                posFilter = "AND pos IN ('ADJ', 'ADV')";
+                break;
+            default:
+                posFilter = `AND pos = '${pos.toUpperCase()}'`;
+        }
+        
+        // Get random words of the specified POS, excluding the provided words
+        const query = `
+            SELECT DISTINCT text, lemma, pos
+            FROM our_video_sentence_tokens
+            WHERE LENGTH(text) > 2
+            AND NOT is_punct
+            AND NOT is_stop
+            ${posFilter}
+            ${exclude.length > 0 ? 'AND LOWER(text) NOT IN (' + exclude.map((_, i) => `$${i + 2}`).join(',') + ')' : ''}
+            ORDER BY RANDOM()
+            LIMIT $1
+        `;
+        
+        const params = [limit];
+        if (exclude.length > 0) {
+            params.push(...exclude.map(w => w.toLowerCase()));
+        }
+        
+        const result = await req.db.query(query, params);
+        
+        res.json({
+            success: true,
+            words: result.rows
+        });
+        
+    } catch (error) {
+        console.error('Error fetching random words:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch random words'
+        });
+    }
+});
+
 module.exports = router;

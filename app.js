@@ -43,9 +43,10 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        secure: false, // Allow cookies over HTTP for now
         httpOnly: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        sameSite: 'lax' // Add sameSite for better compatibility
     }
 }));
 
@@ -85,6 +86,22 @@ app.use('/api/activity', activityRoutes);
 // Import Lückentexte routes
 const lueckentexteRoutes = require('./routes/lueckentexte');
 app.use('/api/lueckentexte', lueckentexteRoutes);
+
+// Import AI routes
+const aiRoutes = require('./routes/ai-api');
+app.use('/api/ai', aiRoutes);
+
+// Import questions routes (using improved version)
+const questionsRoutes = require('./routes/questions-improved');
+app.use('/api/questions', questionsRoutes);
+
+// Import YouTube routes
+const youtubeRoutes = require('./routes/youtube');
+app.use('/api/videos/youtube', youtubeRoutes);
+
+// Import AI summaries routes
+const aiSummariesRoutes = require('./routes/ai-summaries');
+app.use('/api/ai-summaries', aiSummariesRoutes);
 
 // Import auth middleware
 const { optionalAuth, isAuthenticated, isAdmin } = require('./middleware/auth');
@@ -223,7 +240,69 @@ app.get('/api/videos/:videoId', optionalAuth, async (req, res) => {
             return res.status(404).json({ error: 'Video not found' });
         }
         
-        res.json(result.rows[0]);
+        const video = result.rows[0];
+        
+        // Try to get AI summary data
+        try {
+            const summaryResult = await pool.query(`
+                SELECT 
+                    short_summary,
+                    long_summary_raw,
+                    processing_status,
+                    ai_model
+                FROM our_video_ai_summaries
+                WHERE video_id = $1
+            `, [video.video_id]);
+            
+            if (summaryResult.rows.length > 0) {
+                video.aiSummary = summaryResult.rows[0];
+            }
+            
+            // Get learning sentences (AI or transcript)
+            const sentencesQuery = `
+                SELECT 
+                    id,
+                    sentence as text,
+                    sentence_index,
+                    word_count,
+                    source
+                FROM our_video_sentences
+                WHERE video_id = $1 
+                    AND source = 'ai_summary' 
+                    AND is_active = true
+                ORDER BY sentence_index
+            `;
+            
+            let sentencesResult = await pool.query(sentencesQuery, [video.video_id]);
+            
+            // Fall back to transcript sentences if no AI sentences
+            if (sentencesResult.rows.length === 0) {
+                const fallbackQuery = `
+                    SELECT 
+                        id,
+                        sentence as text,
+                        sentence_index,
+                        word_count,
+                        source
+                    FROM our_video_sentences
+                    WHERE video_id = $1 
+                        AND source = 'transcript'
+                    ORDER BY sentence_index
+                `;
+                sentencesResult = await pool.query(fallbackQuery, [video.video_id]);
+            }
+            
+            if (sentencesResult.rows.length > 0) {
+                video.learningSentences = sentencesResult.rows;
+                video.sentenceSource = sentencesResult.rows[0].source;
+            }
+            
+        } catch (error) {
+            console.error('Error fetching AI summary data:', error);
+            // Continue without AI data - not a fatal error
+        }
+        
+        res.json(video);
     } catch (error) {
         console.error('Error fetching video details:', error);
         res.status(500).json({ error: 'Failed to fetch video details' });

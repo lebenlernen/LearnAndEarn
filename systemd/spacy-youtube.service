@@ -1,0 +1,19 @@
+[Unit]
+Description=SpaCy YouTube API Server for LearnAndEarn
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=thomassee
+WorkingDirectory=/Users/thomassee/Docker/containers/LearnAndEarn
+Environment="PYTHONPATH=/Users/thomassee/Docker/containers/LearnAndEarn"
+ExecStart=/Users/thomassee/Docker/containers/LearnAndEarn/spacy_venv/bin/python /Users/thomassee/Docker/containers/LearnAndEarn/spacy_api_server_youtube.py
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=append:/Users/thomassee/Docker/containers/LearnAndEarn/logs/spacy_api.log
+StandardError=append:/Users/thomassee/Docker/containers/LearnAndEarn/logs/spacy_api-error.log
+
+[Install]
+WantedBy=multi-user.target

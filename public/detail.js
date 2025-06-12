@@ -180,12 +180,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayVideoDetails = (video) => {
         const embedUrl = `https://www.youtube.com/embed/${video.video_id}`;
         
+        // Check if AI summary is available
+        const hasAISummary = video.aiSummary && video.aiSummary.processing_status === 'completed';
+        const isProcessing = video.aiSummary && video.aiSummary.processing_status === 'processing';
+        
         videoDetailContainer.innerHTML = `
             <div class="video-player-wrapper">
                 <div class="video-controls-bar">
                     <a href="/transcript.html?id=${videoId}" class="transcript-link">
                         <span class="transcript-icon">📝</span> Transkript anzeigen
                     </a>
+                    ${hasAISummary ? '<span class="ai-badge">✨ AI Enhanced</span>' : ''}
+                    ${isProcessing ? '<span class="ai-processing">⏳ AI Processing...</span>' : ''}
                 </div>
                 <div class="video-player-container">
                     <iframe 
@@ -207,16 +213,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${video.views ? `<span class="metadata-item">Views: ${video.views}</span>` : ''}
                 </div>
                 
-                ${video.description ? `
-                    <div class="video-section">
-                        <h2>Description</h2>
-                        <p class="video-description">${decodeURIComponent(video.description).replace(/\+/g, ' ')}</p>
-                    </div>
-                ` : ''}
-                
                 <div class="video-section">
-                    <h2>Summary</h2>
-                    <div id="summaryContent" class="video-summary">${formatSummary(video.summary)}</div>
+                    <h2>Zusammenfassung</h2>
+                    <div id="summaryContent" class="summary-content">
+                        ${getSummaryContent(video)}
+                    </div>
                 </div>
             </div>
         `;
@@ -225,6 +226,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setupDictationModal();
         makeSentencesClickable();
         setupVocabularyButton();
+        
+        // Try to load sentences for navigation (even without auth)
+        loadVideoSentencesForNavigation();
     };
     
     // Track current sentence and selection
@@ -233,6 +237,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentVideoId = null;
     let practiceStartTime = null;
     let currentSentenceIndex = null;
+    
+    // Format AI learning sentences
+    const formatLearningSentences = (sentences) => {
+        if (!sentences || sentences.length === 0) return '<p>No learning content available.</p>';
+        
+        return sentences.map((sentence, index) => 
+            `<div class="sentence-wrapper">
+                <span class="sentence clickable-sentence" data-sentence-index="${index}">
+                    ${sentence.text}
+                </span>
+            </div>`
+        ).join('');
+    };
     
     // Setup dictation modal
     const setupDictationModal = () => {
@@ -260,8 +277,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Handle text selection in sentence display
         if (sentenceDisplay) {
-            // Function to handle selection
-            const handleTextSelection = () => {
+            // Track if we're in a selection pause (need to access from this scope)
+            let isInSelectionPause = false;
+            let selectionDebounceTimer = null;
+            
+            // Make pause state available to this scope
+            window.setSelectionPause = (state) => {
+                isInSelectionPause = state;
+            };
+            
+            // Function to handle selection (debounced)
+            const handleTextSelectionImmediate = () => {
                 const selection = window.getSelection();
                 const selectedText = selection.toString().trim();
                 
@@ -290,19 +316,33 @@ document.addEventListener('DOMContentLoaded', () => {
                         const systemInput = document.getElementById('systemDictationInput');
                         if (systemInput) {
                             // Use setTimeout to ensure the selection is complete
+                            // Longer delay to prevent interfering with selection
                             setTimeout(() => {
-                                systemInput.focus();
-                                // Don't select all text to preserve any existing input
-                            }, 150);
+                                // Check if there's still a selection before focusing
+                                const selection = window.getSelection();
+                                if (selection && selection.toString().trim()) {
+                                    systemInput.focus();
+                                    // Don't select all text to preserve any existing input
+                                }
+                            }, 500); // Increased delay to 500ms
                         }
                     }
                 } else {
-                    currentSelectedText = '';
-                    sentenceDisplay.classList.remove('has-selection');
-                    // Remove selection info
-                    const existingInfo = document.querySelector('.selection-info');
-                    if (existingInfo) existingInfo.remove();
+                    // Don't clear selection if we're in a pause period
+                    if (!isInSelectionPause) {
+                        currentSelectedText = '';
+                        sentenceDisplay.classList.remove('has-selection');
+                        // Remove selection info
+                        const existingInfo = document.querySelector('.selection-info');
+                        if (existingInfo) existingInfo.remove();
+                    }
                 }
+            };
+            
+            // Debounced version of handleTextSelection
+            const handleTextSelection = () => {
+                if (selectionDebounceTimer) clearTimeout(selectionDebounceTimer);
+                selectionDebounceTimer = setTimeout(handleTextSelectionImmediate, 200);
             };
             
             // Add both mouse and touch event listeners
@@ -352,15 +392,56 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Add idle focus listener for system dictation
         let idleFocusTimer = null;
+        let selectionPauseTimer = null;
+        let isSelectionPaused = false;
         const systemDictationInput = document.getElementById('systemDictationInput');
         
         if (systemDictationInput) {
+            // Add Enter key listener for system dictation
+            systemDictationInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === 'Return') {
+                    e.preventDefault(); // Prevent default form submission
+                    if (window.useSystemDictation && systemDictationInput.value.trim()) {
+                        // Trigger the "Text prüfen" functionality
+                        window.checkSystemDictation();
+                    }
+                }
+            });
+            
+            // Function to pause idle checking when selection starts
+            const pauseIdleChecking = () => {
+                console.log('Selection started - pausing idle checking for 5 seconds');
+                isSelectionPaused = true;
+                if (window.setSelectionPause) window.setSelectionPause(true);
+                if (selectionPauseTimer) clearTimeout(selectionPauseTimer);
+                selectionPauseTimer = setTimeout(() => {
+                    isSelectionPaused = false;
+                    if (window.setSelectionPause) window.setSelectionPause(false);
+                    console.log('Idle checking resumed after selection pause');
+                }, 5000); // 5 second pause
+            };
+            
+            // Listen for selection start events
+            sentenceDisplay.addEventListener('mousedown', pauseIdleChecking);
+            sentenceDisplay.addEventListener('touchstart', pauseIdleChecking);
+            
             // Function to check and refocus
             const checkAndRefocus = () => {
+                // Skip if selection is paused
+                if (isSelectionPaused) {
+                    console.log('Skipping refocus - selection in progress');
+                    return;
+                }
+                
+                // Only refocus if no text is currently being selected
+                const selection = window.getSelection();
+                const isSelecting = selection && selection.toString().trim().length > 0;
+                
                 if (window.useSystemDictation && 
                     modal.style.display === 'block' && 
                     (window.currentSelectedText || currentSelectedText) && 
-                    document.activeElement !== systemDictationInput) {
+                    document.activeElement !== systemDictationInput &&
+                    !isSelecting) {
                     systemDictationInput.focus();
                     console.log('Refocused system dictation input');
                 }
@@ -382,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (modal.style.display === 'block') {
                     checkAndRefocus();
                 }
-            }, 2000); // Check every 2 seconds
+            }, 3000); // Check every 3 seconds (less frequent)
             
             // Clean up interval when modal closes
             const closeButton = modal.querySelector('.close-button');
@@ -390,6 +471,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeButton.addEventListener('click', () => {
                     clearInterval(focusInterval);
                     if (idleFocusTimer) clearTimeout(idleFocusTimer);
+                    if (selectionPauseTimer) clearTimeout(selectionPauseTimer);
+                    isSelectionPaused = false;
                 });
             }
         }
@@ -526,7 +609,28 @@ document.addEventListener('DOMContentLoaded', () => {
         currentVideoId = videoId; // Store video ID for tracking
         currentSentenceIndex = sentenceIndex;
         practiceStartTime = Date.now(); // Start timing
-        sentenceDisplay.textContent = sentence;
+        
+        // Show/hide navigation buttons based on sentence index
+        const prevButton = document.getElementById('prevSentenceButton');
+        const nextButton = document.getElementById('nextSentenceButton');
+        
+        if (sentenceIndex !== null && window.videoSentences) {
+            prevButton.style.display = 'inline-block';
+            nextButton.style.display = 'inline-block';
+            
+            // Disable/enable based on position
+            prevButton.disabled = sentenceIndex <= 0;
+            nextButton.disabled = sentenceIndex >= window.videoSentences.length - 1;
+        } else {
+            prevButton.style.display = 'none';
+            nextButton.style.display = 'none';
+        }
+        
+        // Add line breaks after punctuation marks for better readability
+        const formattedSentence = sentence
+            .replace(/([.!?;:,])(\s*)/g, '$1$2<br>'); // Keep punctuation, any spaces, then add line break
+        
+        sentenceDisplay.innerHTML = formattedSentence;
         sentenceDisplay.classList.remove('has-selection');
         
         // Load user settings to update dictation UI
@@ -603,10 +707,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         const systemInput = document.getElementById('systemDictationInput');
                         if (systemInput) {
                             // Use setTimeout to ensure the selection is complete
+                            // Longer delay to prevent interfering with selection
                             setTimeout(() => {
-                                systemInput.focus();
-                                // Don't select all text to preserve any existing input
-                            }, 150);
+                                // Only focus if we still have a selection
+                                if (window.currentSelectedText || currentSelectedText) {
+                                    systemInput.focus();
+                                    // Don't select all text to preserve any existing input
+                                }
+                            }, 500); // Increased delay to 500ms
                         }
                     }
                 } else {
@@ -1011,6 +1119,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     };
     
+    // Get appropriate summary content
+    const getSummaryContent = (video) => {
+        // Check if transcript is available and not auto-translated
+        const hasGermanTranscript = video.pure_subtitle && !video.is_auto_translated;
+        const hasAISummary = video.aiSummary && video.aiSummary.processing_status === 'completed';
+        
+        if (hasGermanTranscript) {
+            // Use transcript if it's not auto-translated
+            return formatSummary(video.pure_subtitle);
+        } else if (hasAISummary && video.learningSentences) {
+            // Use AI learning sentences if available
+            return formatLearningSentences(video.learningSentences);
+        } else if (hasAISummary && video.aiSummary.short_summary) {
+            // Use AI short summary as fallback
+            return formatSummary(video.aiSummary.short_summary);
+        } else if (video.summary) {
+            // Use regular summary as last resort
+            return formatSummary(video.summary);
+        } else {
+            return '<p>Keine Zusammenfassung verfügbar.</p>';
+        }
+    };
+    
+    // Load video sentences for navigation
+    const loadVideoSentencesForNavigation = async () => {
+        if (window.videoSentences && window.videoSentences.length > 0) {
+            // Already loaded
+            return;
+        }
+        
+        try {
+            const videoId = getVideoId();
+            if (!videoId) return;
+            
+            const response = await fetch(`/api/spacy/sentences/${videoId}`, { 
+                credentials: 'same-origin' 
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.data && data.data.sentences) {
+                    window.videoSentences = data.data.sentences;
+                    console.log(`Loaded ${window.videoSentences.length} sentences for navigation`);
+                }
+            }
+        } catch (error) {
+            console.log('Could not load sentences for navigation:', error);
+        }
+    };
+    
     // Format summary text and make sentences clickable
     const formatSummary = (summary) => {
         if (!summary) return '<p>No summary available.</p>';
@@ -1039,8 +1197,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const sentences = document.querySelectorAll('.clickable-sentence');
         sentences.forEach(sentence => {
             sentence.addEventListener('click', () => {
-                const sentenceIndex = sentence.dataset.sentenceIndex ? parseInt(sentence.dataset.sentenceIndex) : null;
-                openDictationModal(sentence.textContent.trim(), sentenceIndex);
+                const sentenceText = sentence.textContent.trim();
+                
+                // Try to find this sentence in the video sentences array
+                let actualSentenceIndex = null;
+                
+                // Debug logging
+                console.log('Clicked sentence:', sentenceText);
+                console.log('Video sentences available:', window.videoSentences ? window.videoSentences.length : 'Not loaded');
+                
+                if (window.videoSentences && window.videoSentences.length > 0) {
+                    // Log first few sentences for comparison
+                    console.log('First 3 video sentences:', window.videoSentences.slice(0, 3).map(s => s.sentence || s.text));
+                    
+                    // First try exact match
+                    actualSentenceIndex = window.videoSentences.findIndex(s => 
+                        (s.sentence || s.text || '').trim() === sentenceText
+                    );
+                    
+                    // If not found, try partial match (in case of slight differences)
+                    if (actualSentenceIndex === -1) {
+                        actualSentenceIndex = window.videoSentences.findIndex(s => {
+                            const videoSentence = (s.sentence || s.text || '').trim();
+                            return videoSentence.includes(sentenceText) || sentenceText.includes(videoSentence);
+                        });
+                    }
+                }
+                
+                // If we found a match, use that index; otherwise pass null
+                const indexToUse = actualSentenceIndex >= 0 ? actualSentenceIndex : null;
+                console.log('Final index to use:', indexToUse);
+                
+                openDictationModal(sentenceText, indexToUse);
             });
         });
     };
@@ -2677,29 +2865,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return sentence.replace(regex, `<span style="background-color: yellow; font-weight: bold;">${word}</span>`);
     }
     
-    // Setup cloze type buttons
+    // Setup cloze type buttons - automatically start when clicked
     const clozeTypeButtons = document.querySelectorAll('.cloze-type-btn');
     clozeTypeButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             // Update active state
             clozeTypeButtons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentClozeType = btn.dataset.type;
             console.log('Selected cloze type:', currentClozeType);
-        });
-    });
-    
-    // Cloze Tests
-    const startClozeBtn = document.getElementById('startClozeBtn');
-    if (startClozeBtn) {
-        startClozeBtn.addEventListener('click', async () => {
+            
+            // Automatically start cloze tests
             const videoId = getVideoId();
             if (!videoId) return;
             
+            // Reset if tests were already running
+            if (currentClozeTests.length > 0) {
+                currentClozeTests = [];
+                currentClozeIndex = 0;
+                clozeScore = 0;
+                clozeAttempts = 0;
+            }
+            
             // Show loading state
             document.getElementById('clozePlaceholder').style.display = 'none';
+            document.getElementById('clozeContent').style.display = 'none';
             document.getElementById('clozeLoading').style.display = 'block';
-            startClozeBtn.style.display = 'none';
             
             try {
                 // Add exercise type to the request
@@ -2723,12 +2914,13 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error('Error loading cloze tests:', error);
                 document.getElementById('clozeLoading').style.display = 'none';
-                document.getElementById('clozePlaceholder').textContent = 'Error loading cloze tests. Please try again.';
+                document.getElementById('clozePlaceholder').textContent = 'Fehler beim Laden der Übungen. Bitte versuchen Sie es erneut.';
                 document.getElementById('clozePlaceholder').style.display = 'block';
-                startClozeBtn.style.display = 'block';
             }
         });
-    }
+    });
+    
+    // Removed startClozeBtn handler - cloze tests now start automatically when clicking exercise type
     
     // Display cloze test
     function displayClozeTest() {
@@ -2813,6 +3005,144 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p>Your score: ${clozeScore} out of ${currentClozeTests.length}</p>
                 <p>Accuracy: ${percentage}%</p>
                 <button class="btn btn-primary" onclick="location.reload()">Try Again</button>
+            </div>
+        `;
+    }
+    
+    // Questions functionality
+    let currentQuestions = [];
+    let currentQuestionIndex = 0;
+    let questionScore = 0;
+    let questionAttempts = 0;
+    
+    // Start Questions button
+    const startQuestionsBtn = document.getElementById('startQuestionsBtn');
+    if (startQuestionsBtn) {
+        startQuestionsBtn.addEventListener('click', async () => {
+            const videoId = getVideoId();
+            if (!videoId) return;
+            
+            // Show loading state
+            document.getElementById('questionsPlaceholder').style.display = 'none';
+            document.getElementById('questionsLoading').style.display = 'block';
+            startQuestionsBtn.style.display = 'none';
+            
+            try {
+                const response = await fetch(`/api/questions/${videoId}`, {
+                    credentials: 'same-origin'
+                });
+                
+                if (!response.ok) throw new Error('Failed to load questions');
+                
+                const data = await response.json();
+                
+                if (data.questions && data.questions.length > 0) {
+                    currentQuestions = data.questions;
+                    currentQuestionIndex = 0;
+                    questionScore = 0;
+                    questionAttempts = 0;
+                    displayQuestion();
+                } else {
+                    throw new Error('No questions available for this video');
+                }
+            } catch (error) {
+                console.error('Error loading questions:', error);
+                document.getElementById('questionsLoading').style.display = 'none';
+                document.getElementById('questionsPlaceholder').textContent = 
+                    'No questions available yet. Questions will be generated automatically.';
+                document.getElementById('questionsPlaceholder').style.display = 'block';
+                startQuestionsBtn.style.display = 'block';
+            }
+        });
+    }
+    
+    // Display question
+    function displayQuestion() {
+        if (currentQuestionIndex >= currentQuestions.length) {
+            showQuestionResults();
+            return;
+        }
+        
+        document.getElementById('questionsLoading').style.display = 'none';
+        document.getElementById('questionsContent').style.display = 'block';
+        
+        const question = currentQuestions[currentQuestionIndex];
+        document.getElementById('questionText').textContent = question.question;
+        document.getElementById('currentQuestionNum').textContent = currentQuestionIndex + 1;
+        document.getElementById('totalQuestionsNum').textContent = currentQuestions.length;
+        
+        const optionsContainer = document.getElementById('questionOptions');
+        optionsContainer.innerHTML = '';
+        
+        // Parse options if they're a string
+        const options = typeof question.options === 'string' 
+            ? JSON.parse(question.options) 
+            : question.options;
+        
+        options.forEach(option => {
+            const btn = document.createElement('button');
+            btn.className = 'question-option-btn';
+            btn.innerHTML = `<strong>${option.label}:</strong> ${option.text}`;
+            btn.addEventListener('click', () => checkQuestionAnswer(option.label, question.correct_answer, question.explanation));
+            optionsContainer.appendChild(btn);
+        });
+        
+        document.getElementById('questionResult').style.display = 'none';
+        document.getElementById('nextQuestionBtn').style.display = 'none';
+    }
+    
+    // Check question answer
+    function checkQuestionAnswer(answer, correctAnswer, explanation) {
+        questionAttempts++;
+        const isCorrect = answer === correctAnswer;
+        if (isCorrect) questionScore++;
+        
+        // Disable all option buttons
+        document.querySelectorAll('.question-option-btn').forEach(btn => {
+            btn.disabled = true;
+            const label = btn.innerHTML.match(/<strong>([A-D]):/)[1];
+            if (label === correctAnswer) {
+                btn.classList.add('correct');
+            } else if (label === answer && !isCorrect) {
+                btn.classList.add('incorrect');
+            }
+        });
+        
+        // Show result
+        const resultDiv = document.getElementById('questionResult');
+        resultDiv.innerHTML = `
+            <p class="${isCorrect ? 'correct' : 'incorrect'}">
+                ${isCorrect ? '✅ Richtig!' : '❌ Falsch!'}
+            </p>
+            ${explanation ? `<p class="explanation"><strong>Erklärung:</strong> ${explanation}</p>` : ''}
+        `;
+        resultDiv.style.display = 'block';
+        
+        // Update score
+        document.getElementById('questionScore').textContent = questionScore;
+        document.getElementById('questionAttempts').textContent = questionAttempts;
+        
+        // Show next button
+        document.getElementById('nextQuestionBtn').style.display = 'block';
+    }
+    
+    // Next question
+    document.getElementById('nextQuestionBtn')?.addEventListener('click', () => {
+        currentQuestionIndex++;
+        displayQuestion();
+    });
+    
+    // Show final question results
+    function showQuestionResults() {
+        const questionsContent = document.getElementById('questionsContent');
+        const percentage = Math.round((questionScore / currentQuestions.length) * 100);
+        
+        questionsContent.innerHTML = `
+            <div class="question-final-results">
+                <h3>Quiz abgeschlossen!</h3>
+                <p>Ihre Punktzahl: ${questionScore} von ${currentQuestions.length}</p>
+                <p>Genauigkeit: ${percentage}%</p>
+                <button class="btn btn-primary" onclick="location.reload()">Nochmal versuchen</button>
             </div>
         `;
     }
@@ -3093,4 +3423,28 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check periodically for translation
     setInterval(detectTranslation, 2000);
+    
+    // Navigation button handlers for dictation modal
+    const prevSentenceButton = document.getElementById('prevSentenceButton');
+    const nextSentenceButton = document.getElementById('nextSentenceButton');
+    
+    if (prevSentenceButton) {
+        prevSentenceButton.addEventListener('click', () => {
+            if (currentSentenceIndex !== null && currentSentenceIndex > 0 && window.videoSentences) {
+                const newIndex = currentSentenceIndex - 1;
+                const sentence = window.videoSentences[newIndex].sentence || window.videoSentences[newIndex].text;
+                openDictationModal(sentence, newIndex);
+            }
+        });
+    }
+    
+    if (nextSentenceButton) {
+        nextSentenceButton.addEventListener('click', () => {
+            if (currentSentenceIndex !== null && window.videoSentences && currentSentenceIndex < window.videoSentences.length - 1) {
+                const newIndex = currentSentenceIndex + 1;
+                const sentence = window.videoSentences[newIndex].sentence || window.videoSentences[newIndex].text;
+                openDictationModal(sentence, newIndex);
+            }
+        });
+    }
 });

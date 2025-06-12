@@ -46,7 +46,7 @@ def get_db_connection():
         port=os.getenv('DB_PORT', 3143),
         database=os.getenv('DB_NAME', 'jetzt'),
         user=os.getenv('DB_USER', 'odoo'),
-        password=os.getenv('DB_PASSWORD')
+        password=os.getenv('DB_PASSWORD', 'odoo')
     )
 
 # Pydantic models
@@ -530,7 +530,7 @@ async def process_sentence(request: ProcessSentenceRequest):
             })
     
     return {
-        "text": text,
+        "text": request.text,
         "tokens": tokens,
         "token_count": len(tokens)
     }

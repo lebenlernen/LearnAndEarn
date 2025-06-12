@@ -1,0 +1,20 @@
+[Unit]
+Description=LearnAndEarn Node.js Application
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=thomassee
+WorkingDirectory=/Users/thomassee/Docker/containers/LearnAndEarn
+Environment="NODE_ENV=production"
+Environment="PORT=3000"
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=append:/Users/thomassee/Docker/containers/LearnAndEarn/logs/node.log
+StandardError=append:/Users/thomassee/Docker/containers/LearnAndEarn/logs/node-error.log
+
+[Install]
+WantedBy=multi-user.target

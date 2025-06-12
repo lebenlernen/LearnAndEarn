@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.learnandearn.node</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>app.js</string>
+    </array>
+    
+    <key>WorkingDirectory</key>
+    <string>/Users/thomassee/Docker/containers/LearnAndEarn</string>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>NODE_ENV</key>
+        <string>production</string>
+        <key>PORT</key>
+        <string>3000</string>
+        <key>DB_HOST</key>
+        <string>localhost</string>
+        <key>DB_PORT</key>
+        <string>3143</string>
+        <key>DB_DATABASE</key>
+        <string>jetzt</string>
+        <key>DB_USER</key>
+        <string>odoo</string>
+        <key>DB_PASSWORD</key>
+        <string>odoo</string>
+    </dict>
+    
+    <!-- Start automatically at login -->
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <!-- Keep the service running -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+    
+    <!-- Restart if it crashes -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    
+    <!-- Log files -->
+    <key>StandardOutPath</key>
+    <string>/Users/thomassee/Docker/containers/LearnAndEarn/logs/node.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/thomassee/Docker/containers/LearnAndEarn/logs/node-error.log</string>
+</dict>
+</plist>

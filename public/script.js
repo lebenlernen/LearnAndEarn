@@ -19,24 +19,40 @@ document.addEventListener('DOMContentLoaded', () => {
         const authPrompt = document.getElementById('authPrompt');
         
         if (authData.authenticated) {
-            userHeader.style.display = 'flex';
-            authPrompt.style.display = 'none';
+            if (userHeader) {
+                userHeader.style.display = 'flex';
+            }
+            if (authPrompt) {
+                authPrompt.style.display = 'none';
+            }
             
-            document.getElementById('userName').textContent = authData.user.username;
+            const userNameElement = document.getElementById('userName');
+            if (userNameElement) {
+                userNameElement.textContent = authData.user.username;
+            }
             
             // Handle multiple roles
             const roles = authData.user.roles || [authData.user.role || 'student'];
             const roleElement = document.getElementById('userRole');
-            roleElement.textContent = roles.join(', ');
-            
-            // Check if user has admin role
-            if (roles.includes('admin')) {
-                roleElement.classList.add('admin');
-                document.getElementById('adminLink').style.display = 'inline-block';
+            if (roleElement) {
+                roleElement.textContent = roles.join(', ');
+                
+                // Check if user has admin role
+                if (roles.includes('admin')) {
+                    roleElement.classList.add('admin');
+                    const adminLink = document.getElementById('adminLink');
+                    if (adminLink) {
+                        adminLink.style.display = 'inline-block';
+                    }
+                }
             }
         } else {
-            userHeader.style.display = 'none';
-            authPrompt.style.display = 'block';
+            if (userHeader) {
+                userHeader.style.display = 'none';
+            }
+            if (authPrompt) {
+                authPrompt.style.display = 'block';
+            }
         }
     }
     

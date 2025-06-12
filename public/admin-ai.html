@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Configuration - LearnAndEarn Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .ai-config-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+        .config-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .provider-options {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .provider-card {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .provider-card.active {
+            border-color: #4CAF50;
+            background-color: #f8fdf8;
+        }
+        .model-select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-section {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+        }
+        .test-result {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .process-video-section {
+            margin-top: 30px;
+        }
+        .video-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .video-input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .processing-result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .processing-result.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .processing-result.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-indicator.active {
+            background-color: #4CAF50;
+        }
+        .status-indicator.inactive {
+            background-color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="admin.html">Admin Dashboard</a>
+        <a href="admin-ai.html" class="active">AI Configuration</a>
+        <span id="userStatus"></span>
+    </nav>
+
+    <div class="ai-config-container">
+        <h1>AI Configuration</h1>
+        
+        <div class="config-section">
+            <h2>Current Configuration</h2>
+            <p>Active Provider: <span id="currentProvider"></span></p>
+            <p>Active Model: <span id="currentModel"></span></p>
+        </div>
+
+        <div class="config-section">
+            <h2>Select AI Provider</h2>
+            <div class="provider-options" id="providerOptions">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <div class="config-section test-section">
+            <h2>Test AI Connection</h2>
+            <textarea id="testPrompt" rows="3" style="width: 100%; padding: 10px;">
+Hallo! Bitte antworte mit "AI-Verbindung erfolgreich", wenn du diese Nachricht lesen kannst.</textarea>
+            <button onclick="testAIConnection()" class="btn">Test Connection</button>
+            <div id="testResult" class="test-result" style="display: none;"></div>
+        </div>
+
+        <div class="config-section process-video-section">
+            <h2>Process Video with AI</h2>
+            <p>Generate questions and summaries for videos with auto-subtitles (sub_manual != 2)</p>
+            
+            <div class="video-input-group">
+                <input type="text" id="videoId" placeholder="Enter Video ID (e.g., iqkMO-0-2RA)">
+                <button onclick="processVideo()" class="btn">Process Video</button>
+            </div>
+            
+            <div id="processingResult" style="display: none;"></div>
+        </div>
+
+        <div class="config-section">
+            <h2>Batch Processing</h2>
+            <p>Process all videos that need AI enhancement (auto-subtitled videos without questions)</p>
+            <button onclick="findVideosToProcess()" class="btn">Find Videos to Process</button>
+            <div id="batchResult" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentConfig = null;
+
+        // Load current configuration
+        async function loadConfiguration() {
+            try {
+                // First check auth status
+                const authResponse = await fetch('/api/ai/debug-auth', {
+                    credentials: 'include'
+                });
+                
+                if (authResponse.ok) {
+                    const authData = await authResponse.json();
+                    console.log('Auth debug:', authData);
+                }
+                
+                const response = await fetch('/api/ai/config', {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    console.error('Config response:', response.status, errorData);
+                    throw new Error(`Failed to load configuration: ${response.status} ${errorData}`);
+                }
+                
+                const data = await response.json();
+                currentConfig = data;
+                displayConfiguration(data);
+            } catch (error) {
+                console.error('Error loading configuration:', error);
+                alert('Error loading AI configuration: ' + error.message);
+            }
+        }
+
+        // Display configuration
+        function displayConfiguration(data) {
+            document.getElementById('currentProvider').textContent = data.current.provider;
+            document.getElementById('currentModel').textContent = data.current.modelName;
+            
+            const providerOptions = document.getElementById('providerOptions');
+            providerOptions.innerHTML = '';
+            
+            data.providers.forEach(provider => {
+                const card = document.createElement('div');
+                card.className = 'provider-card' + (provider.key === data.current.provider ? ' active' : '');
+                
+                const modelSelect = document.createElement('select');
+                modelSelect.className = 'model-select';
+                modelSelect.onchange = () => selectProvider(provider.key, modelSelect.value);
+                
+                provider.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.key;
+                    option.textContent = `${model.name} (${model.maxTokens} tokens)`;
+                    if (provider.key === data.current.provider && model.key === data.current.model) {
+                        option.selected = true;
+                    }
+                    modelSelect.appendChild(option);
+                });
+                
+                card.innerHTML = `
+                    <h3>${provider.name}</h3>
+                    <span class="status-indicator ${provider.key === data.current.provider ? 'active' : 'inactive'}"></span>
+                    ${provider.key === data.current.provider ? 'Active' : 'Inactive'}
+                `;
+                card.appendChild(modelSelect);
+                card.onclick = (e) => {
+                    if (e.target.tagName !== 'SELECT') {
+                        selectProvider(provider.key, provider.defaultModel);
+                    }
+                };
+                
+                providerOptions.appendChild(card);
+            });
+        }
+
+        // Select provider
+        async function selectProvider(provider, model) {
+            try {
+                const response = await fetch('/api/ai/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ provider, model }),
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to update configuration');
+                }
+                
+                const data = await response.json();
+                alert(data.message);
+                loadConfiguration();
+            } catch (error) {
+                console.error('Error updating configuration:', error);
+                alert('Error updating configuration');
+            }
+        }
+
+        // Test AI connection
+        async function testAIConnection() {
+            const testPrompt = document.getElementById('testPrompt').value;
+            const resultDiv = document.getElementById('testResult');
+            
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = 'Testing connection...';
+            
+            try {
+                const response = await fetch('/api/ai/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ testPrompt }),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <strong>✓ Connection successful!</strong><br>
+                        Provider: ${data.provider}<br>
+                        Model: ${data.model}<br>
+                        Response: ${data.response}
+                    `;
+                    resultDiv.style.color = 'green';
+                } else {
+                    resultDiv.innerHTML = `<strong>✗ Connection failed:</strong> ${data.error}`;
+                    resultDiv.style.color = 'red';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>✗ Error:</strong> ${error.message}`;
+                resultDiv.style.color = 'red';
+            }
+        }
+
+        // Process video
+        async function processVideo() {
+            const videoId = document.getElementById('videoId').value.trim();
+            const resultDiv = document.getElementById('processingResult');
+            
+            if (!videoId) {
+                alert('Please enter a video ID');
+                return;
+            }
+            
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'processing-result';
+            resultDiv.innerHTML = 'Processing video...';
+            
+            try {
+                const response = await fetch('/api/ai/process-video', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ videoId }),
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'processing-result success';
+                    resultDiv.innerHTML = `
+                        <strong>✓ Processing complete!</strong><br>
+                        Video ID: ${data.videoId}<br>
+                        Processed: ${data.processed.join(', ')}<br>
+                        Questions generated: ${data.questionsGenerated || 0}
+                    `;
+                } else {
+                    resultDiv.className = 'processing-result error';
+                    resultDiv.innerHTML = `<strong>✗ Error:</strong> ${data.error}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'processing-result error';
+                resultDiv.innerHTML = `<strong>✗ Error:</strong> ${error.message}`;
+            }
+        }
+
+        // Find videos to process
+        async function findVideosToProcess() {
+            const resultDiv = document.getElementById('batchResult');
+            resultDiv.innerHTML = 'Searching for videos...';
+            
+            try {
+                const response = await fetch('/api/ai/videos-to-process', {
+                    credentials: 'include'
+                });
+                
+                const data = await response.json();
+                
+                if (data.videos && data.videos.length > 0) {
+                    resultDiv.innerHTML = `
+                        <strong>Found ${data.videos.length} videos to process:</strong><br>
+                        ${data.videos.map(v => `${v.video_id} - ${v.title}`).join('<br>')}
+                        <br><br>
+                        <button onclick="processAllVideos()" class="btn">Process All Videos</button>
+                    `;
+                } else {
+                    resultDiv.innerHTML = 'No videos found that need AI processing.';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfiguration();
+            
+            // Check user status
+            fetch('/api/auth/status', { credentials: 'include' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.user) {
+                        document.getElementById('userStatus').innerHTML = 
+                            `${data.user.username} (${data.user.role}) | <a href="profile.html">Profile</a> | <a href="#" onclick="logout()">Logout</a>`;
+                    } else {
+                        window.location.href = 'login.html';
+                    }
+                });
+        });
+
+        function logout() {
+            fetch('/api/auth/logout', { 
+                method: 'POST',
+                credentials: 'include'
+            }).then(() => {
+                window.location.href = 'login.html';
+            });
+        }
+    </script>
+</body>
+</html>

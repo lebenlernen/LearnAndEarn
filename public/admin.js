@@ -212,4 +212,103 @@ window.onclick = function(event) {
     if (event.target === modal) {
         closeRoleModal();
     }
+}
+
+// Section switching
+function showSection(section) {
+    const usersSection = document.getElementById('usersSection');
+    const configSection = document.getElementById('configSection');
+    
+    if (section === 'users') {
+        usersSection.style.display = 'block';
+        configSection.style.display = 'none';
+    } else if (section === 'config') {
+        usersSection.style.display = 'none';
+        configSection.style.display = 'block';
+        loadSystemConfig();
+    }
+}
+
+// Load system configuration
+async function loadSystemConfig() {
+    try {
+        const response = await fetch('/api/admin/config', {
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to load configuration');
+        }
+        
+        const data = await response.json();
+        displaySystemConfig(data.configs);
+    } catch (error) {
+        console.error('Error loading system config:', error);
+        document.getElementById('configContainer').innerHTML = 
+            '<div class="error">Failed to load system configuration</div>';
+    }
+}
+
+// Display system configuration
+function displaySystemConfig(configs) {
+    const container = document.getElementById('configContainer');
+    container.innerHTML = '';
+    
+    // Find question generation config
+    const questionConfig = configs.find(c => c.key === 'question_generation_allowed');
+    
+    if (questionConfig) {
+        const configItem = document.createElement('div');
+        configItem.className = 'config-item';
+        configItem.innerHTML = `
+            <h3>Question Generation Permissions</h3>
+            <p class="description">${questionConfig.description}</p>
+            <div class="config-value">
+                <div class="role-selector">
+                    <label>
+                        <input type="checkbox" value="user" ${questionConfig.value.includes('user') ? 'checked' : ''}>
+                        User
+                    </label>
+                    <label>
+                        <input type="checkbox" value="teacher" ${questionConfig.value.includes('teacher') ? 'checked' : ''}>
+                        Teacher
+                    </label>
+                    <label>
+                        <input type="checkbox" value="admin" ${questionConfig.value.includes('admin') ? 'checked' : ''}>
+                        Admin
+                    </label>
+                </div>
+                <button class="btn btn-primary" onclick="saveQuestionPermissions()">Save</button>
+            </div>
+        `;
+        container.appendChild(configItem);
+    }
+}
+
+// Save question generation permissions
+async function saveQuestionPermissions() {
+    const checkboxes = document.querySelectorAll('.role-selector input[type="checkbox"]:checked');
+    const selectedRoles = Array.from(checkboxes).map(cb => cb.value);
+    
+    try {
+        const response = await fetch('/api/admin/config/question_generation_allowed', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ value: selectedRoles })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to update configuration');
+        }
+        
+        const result = await response.json();
+        alert('Configuration updated successfully!');
+        loadSystemConfig(); // Reload to show updated values
+    } catch (error) {
+        console.error('Error updating configuration:', error);
+        alert('Failed to update configuration');
+    }
 } 

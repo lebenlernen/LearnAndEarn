@@ -163,4 +163,90 @@ router.put('/users/:userId/toggle-active', isAuthenticated, isAdmin, async (req,
     }
 });
 
+// Get system configuration
+router.get('/config', isAuthenticated, isAdmin, async (req, res) => {
+    try {
+        const result = await req.db.query(
+            'SELECT config_key, config_value, config_type, description FROM our_system_config ORDER BY config_key'
+        );
+        
+        // Parse JSON/array values
+        const configs = result.rows.map(row => {
+            let value = row.config_value;
+            if (row.config_type === 'array' || row.config_type === 'json') {
+                try {
+                    value = JSON.parse(row.config_value);
+                } catch (e) {
+                    console.error('Error parsing config value:', e);
+                }
+            } else if (row.config_type === 'boolean') {
+                value = row.config_value === 'true';
+            }
+            
+            return {
+                key: row.config_key,
+                value: value,
+                type: row.config_type,
+                description: row.description
+            };
+        });
+        
+        res.json({ configs });
+    } catch (error) {
+        console.error('Error fetching system config:', error);
+        res.status(500).json({ error: 'Failed to fetch system configuration' });
+    }
+});
+
+// Update system configuration
+router.put('/config/:key', isAuthenticated, isAdmin, async (req, res) => {
+    const { key } = req.params;
+    const { value } = req.body;
+    
+    try {
+        // Get current config to know the type
+        const currentResult = await req.db.query(
+            'SELECT config_type FROM our_system_config WHERE config_key = $1',
+            [key]
+        );
+        
+        if (currentResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Configuration key not found' });
+        }
+        
+        const configType = currentResult.rows[0].config_type;
+        let valueToStore = value;
+        
+        // Convert value based on type
+        if (configType === 'array' || configType === 'json') {
+            valueToStore = JSON.stringify(value);
+        } else if (configType === 'boolean') {
+            valueToStore = value ? 'true' : 'false';
+        } else {
+            valueToStore = String(value);
+        }
+        
+        // Update the configuration
+        const result = await req.db.query(
+            `UPDATE our_system_config 
+             SET config_value = $1, updated_at = CURRENT_TIMESTAMP 
+             WHERE config_key = $2 
+             RETURNING config_key, config_value, config_type`,
+            [valueToStore, key]
+        );
+        
+        res.json({ 
+            success: true, 
+            config: {
+                key: result.rows[0].config_key,
+                value: configType === 'array' || configType === 'json' ? JSON.parse(result.rows[0].config_value) : result.rows[0].config_value,
+                type: result.rows[0].config_type
+            }
+        });
+    } catch (error) {
+        console.error('Error updating system config:', error);
+        res.status(500).json({ error: 'Failed to update system configuration' });
+    }
+});
+
 module.exports = router; 

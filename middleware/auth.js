@@ -22,8 +22,13 @@ const isAuthenticated = async (req, res, next) => {
 
 // Middleware to check if user is admin
 const isAdmin = (req, res, next) => {
-    if (req.session && req.session.userId && req.session.role === 'admin') {
-        next();
+    if (req.session && req.session.userId) {
+        const roles = req.session.roles || [req.session.role || 'student'];
+        if (roles.includes('admin')) {
+            next();
+        } else {
+            res.status(403).json({ error: 'Administratorzugriff erforderlich' });
+        }
     } else {
         res.status(403).json({ error: 'Administratorzugriff erforderlich' });
     }
@@ -53,10 +58,16 @@ const verifyToken = (token) => {
     }
 };
 
+// Combined middleware - require authentication first, then check admin
+const requireAuth = isAuthenticated;
+const requireAdmin = [isAuthenticated, isAdmin];
+
 module.exports = {
     isAuthenticated,
     isAdmin,
     optionalAuth,
     generateToken,
-    verifyToken
+    verifyToken,
+    requireAuth,
+    requireAdmin
 }; 

@@ -294,7 +294,11 @@
         
         /* Exercise type selector */
         .exercise-type-selector {
-            margin-bottom: 20px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f0f7ff;
+            border-radius: 8px;
+            border: 2px solid #007bff;
         }
         
         .exercise-type-selector label {
@@ -302,6 +306,7 @@
             margin-bottom: 10px;
             font-weight: 600;
             color: #333;
+            font-size: 1.1em;
         }
         
         .type-buttons {
@@ -380,9 +385,6 @@
         <div class="nav-links">
             <a href="/home.html" class="nav-link">Startseite</a>
             <a href="/search.html" class="nav-link">Videosuche</a>
-            <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
-            <a href="/fill-in-the-blanks.html" class="nav-link active">Lückentexte</a>
-            <a href="/questions.html" class="nav-link">Fragen</a>
             <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
             <a href="/learning-time.html" class="nav-link">Lernzeit</a>
         </div>
@@ -402,17 +404,6 @@
         <div class="exercise-header">
             <h1>Lückentexte</h1>
             
-            <div class="exercise-type-selector">
-                <label>Übungstyp:</label>
-                <div class="type-buttons">
-                    <button class="type-btn active" data-type="artikel">Artikel</button>
-                    <button class="type-btn" data-type="verben">Verben</button>
-                    <button class="type-btn" data-type="substantive">Substantive</button>
-                    <button class="type-btn" data-type="schwierig">Schwierige Wörter</button>
-                    <button class="type-btn" data-type="spaced">Spaced Repetition</button>
-                </div>
-            </div>
-            
             <div class="video-selector">
                 <label for="videoSelect">Video auswählen:</label>
                 <select id="videoSelect">
@@ -420,11 +411,23 @@
                 </select>
             </div>
             
-            <div class="difficulty-selector">
-                <button class="difficulty-btn active" data-level="1">
+            <div class="exercise-type-selector" id="exerciseTypeSelector" style="display: none;">
+                <label>Wählen Sie einen Übungstyp um zu beginnen:</label>
+                <div class="type-buttons">
+                    <button class="type-btn active" data-type="artikel">Artikel</button>
+                    <button class="type-btn" data-type="verben">Verben</button>
+                    <button class="type-btn" data-type="substantive">Substantive</button>
+                    <button class="type-btn" data-type="adjektive">Adjektive</button>
+                    <button class="type-btn" data-type="schwierig">Schwierige Wörter</button>
+                    <button class="type-btn" data-type="spaced">Spaced Repetition</button>
+                </div>
+            </div>
+            
+            <div class="difficulty-selector" style="display: none;">
+                <button class="difficulty-btn" data-level="1">
                     Level 1 - Nur fehlende Wörter
                 </button>
-                <button class="difficulty-btn" data-level="2">
+                <button class="difficulty-btn active" data-level="2">
                     Level 2 - Mit zusätzlichen Wörtern
                 </button>
                 <button class="difficulty-btn" data-level="3">
@@ -436,7 +439,7 @@
         <div class="exercise-area">
             <div class="instructions">
                 <strong>Anleitung:</strong> <span id="instructionText">Ziehen Sie die Artikel in die Lücken.</span>
-                <span class="level-badge">Level <span id="currentLevel">1</span></span>
+                <span class="level-badge">Level <span id="currentLevel">2</span></span>
             </div>
             
             <div id="exerciseContent">
@@ -449,7 +452,6 @@
             <div class="feedback-message" id="feedbackMessage"></div>
             
             <div class="control-buttons" id="controlButtons" style="display: none;">
-                <button class="btn-reset" onclick="resetExercise()">Zurücksetzen</button>
                 <button class="btn-check" onclick="checkAnswers()">Überprüfen</button>
                 <button class="btn-next" onclick="nextExercise()" style="display: none;">Nächste Übung</button>
             </div>

@@ -40,11 +40,9 @@
                     <div class="nav-links">
                 <a href="/home.html" class="nav-link">Startseite</a>
                 <a href="/search.html" class="nav-link">Videosuche</a>
-                <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
-                <a href="/fill-in-the-blanks.html" class="nav-link">Lückentexte</a>
-                <a href="/questions.html" class="nav-link">Fragen</a>
                 <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
                 <a href="/learning-time.html" class="nav-link">Lernzeit</a>
+                <a href="/fill-in-the-blanks.html" class="nav-link">Lückentexte anders</a>
             </div>
         <div class="user-menu">
             <div class="user-info">
@@ -67,12 +65,6 @@
             <p class="loading">Loading video details...</p>
         </div>
         
-        <div class="video-summary">
-            <h3>Summary</h3>
-            <div id="summaryContent" class="summary-content learning-content notranslate">
-                <!-- Summary will be loaded here -->
-            </div>
-        </div>
     </div>
     
     <!-- Dictation Modal -->
@@ -114,7 +106,9 @@
             <div id="comparisonResult" class="comparison-result"></div>
             
             <div class="dictation-buttons">
+                <button id="prevSentenceButton" class="nav-button" style="display: none;">← Vorheriger Satz</button>
                 <button id="viewHistoryButton" class="history-button" style="display: none;">Übungsverlauf anzeigen</button>
+                <button id="nextSentenceButton" class="nav-button" style="display: none;">Nächster Satz →</button>
             </div>
             
             <div id="attemptCounter" class="attempt-counter" style="display: none;">
@@ -178,10 +172,10 @@
             
             <!-- Exercise Type Selection -->
             <div class="cloze-type-selector">
-                <label>Übungstyp wählen:</label>
+                <label>Wählen Sie einen Übungstyp um zu beginnen:</label>
                 <div class="cloze-type-buttons">
                     <button class="cloze-type-btn" data-type="random">Zufällig</button>
-                    <button class="cloze-type-btn active" data-type="artikel">Artikel</button>
+                    <button class="cloze-type-btn" data-type="artikel">Artikel</button>
                     <button class="cloze-type-btn" data-type="verben">Verben</button>
                     <button class="cloze-type-btn" data-type="substantive">Substantive</button>
                     <button class="cloze-type-btn" data-type="adjektive">Adjektive</button>
@@ -212,12 +206,9 @@
                         <span>Score: <span id="clozeScore">0</span>/<span id="clozeAttempts">0</span></span>
                     </div>
                 </div>
-                <div id="clozePlaceholder" class="placeholder-text">
-                    Click "Start Cloze Tests" to practice with fill-in-the-blank exercises.
+                <div id="clozePlaceholder" class="placeholder-text" style="display: none;">
+                    Wählen Sie oben einen Übungstyp aus.
                 </div>
-                <button class="btn btn-primary" id="startClozeBtn">
-                    Start Cloze Tests
-                </button>
             </div>
         </div>
     </div>

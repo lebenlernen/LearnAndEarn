@@ -195,6 +195,56 @@
             color: #666;
             margin-top: 4px;
         }
+        
+        .config-item {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .config-item h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .config-item .description {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+        
+        .config-value {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .config-value select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-width: 200px;
+        }
+        
+        .role-selector {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .role-selector label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+        
+        .btn.active {
+            background-color: #1a73e8;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -202,9 +252,6 @@
                     <div class="nav-links">
                 <a href="/home.html" class="nav-link">Startseite</a>
                 <a href="/search.html" class="nav-link">Videosuche</a>
-                <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
-                <a href="/fill-in-the-blanks.html" class="nav-link">Lückentexte</a>
-                <a href="/questions.html" class="nav-link">Fragen</a>
                 <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
                 <a href="/learning-time.html" class="nav-link">Lernzeit</a>
             </div>
@@ -224,11 +271,17 @@
         
         <div class="admin-container">
             <div class="admin-header">
-                <h1>Admin Panel - User Management</h1>
-                <button class="btn btn-primary" onclick="location.reload()">Refresh</button>
+                <h1>Admin Panel</h1>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="showSection('users')">User Management</button>
+                    <button class="btn btn-secondary" onclick="showSection('config')">System Configuration</button>
+                    <button class="btn btn-primary" onclick="location.reload()">Refresh</button>
+                </div>
             </div>
             
-            <table class="users-table" id="usersTable">
+            <!-- Users Section -->
+            <div id="usersSection" class="admin-section">
+                <table class="users-table" id="usersTable">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -245,7 +298,16 @@
                         <td colspan="7" style="text-align: center;">Loading...</td>
                     </tr>
                 </tbody>
-            </table>
+                </table>
+            </div>
+            
+            <!-- System Configuration Section -->
+            <div id="configSection" class="admin-section" style="display: none;">
+                <h2>System Configuration</h2>
+                <div id="configContainer" style="margin-top: 20px;">
+                    <div class="config-loading">Loading configuration...</div>
+                </div>
+            </div>
         </div>
         
         <!-- Role Edit Modal -->

@@ -238,9 +238,9 @@ fi
         }
     }
     
-    # Start SpaCy API server
-    print_status "Starting SpaCy API server on port 8001..."
-    python spacy_api_server.py > "$LOG_DIR/spacy_api.log" 2>&1 &
+    # Start SpaCy API server (YouTube version)
+    print_status "Starting SpaCy API server with YouTube support on port 8001..."
+    python spacy_api_server_youtube.py > "$LOG_DIR/spacy_api.log" 2>&1 &
     SPACY_PID=$!
     echo $SPACY_PID > "$LOG_DIR/spacy.pid"
 ) &
@@ -308,7 +308,7 @@ while true; do
         print_warning "SpaCy API server crashed! Restarting..."
         (
             source spacy_venv/bin/activate 2>/dev/null
-            python spacy_api_server.py > "$LOG_DIR/spacy_api.log" 2>&1 &
+            python spacy_api_server_youtube.py > "$LOG_DIR/spacy_api.log" 2>&1 &
             SPACY_PID=$!
             echo $SPACY_PID > "$LOG_DIR/spacy.pid"
         )

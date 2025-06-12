@@ -134,6 +134,56 @@
             margin-bottom: 20px;
             display: none;
         }
+        
+        /* Video add section styles */
+        .video-preview-container {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+        }
+        
+        .video-info h5 {
+            margin: 10px 0;
+            color: #2c3e50;
+        }
+        
+        .video-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+        
+        .transcript-preview {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .language-select {
+            margin: 15px 0;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading-spinner::after {
+            content: '⏳';
+            font-size: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -141,11 +191,9 @@
         <div class="nav-links">
             <a href="/home.html" class="nav-link">Startseite</a>
             <a href="/search.html" class="nav-link">Videosuche</a>
-            <a href="/vocabulary.html" class="nav-link">Vokabeln</a>
-            <a href="/fill-in-the-blanks.html" class="nav-link">Lückentexte</a>
-            <a href="/questions.html" class="nav-link">Fragen</a>
             <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
             <a href="/learning-time.html" class="nav-link">Lernzeit</a>
+            <a href="/fill-in-the-blanks.html" class="nav-link">Lückentexte anders</a>
         </div>
         <div class="user-menu">
             <div class="user-info">
@@ -249,9 +297,29 @@
                 <button type="submit" class="btn-save">Profil speichern</button>
             </form>
             
+            <div id="teacherSection" style="display: none; margin-top: 30px;">
+                <h3>Lehrer-Funktionen</h3>
+                <div class="video-add-section" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 15px;">
+                    <h4>Neues Video hinzufügen</h4>
+                    <form id="addVideoForm" style="margin-top: 15px;">
+                        <div class="form-group">
+                            <label for="youtubeUrl">YouTube URL</label>
+                            <input type="url" id="youtubeUrl" name="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." required>
+                        </div>
+                        <button type="submit" class="btn-save" style="background: #3498db;">Video laden</button>
+                    </form>
+                    <div id="videoPreview" style="display: none; margin-top: 20px;">
+                        <!-- Video preview will be shown here -->
+                    </div>
+                </div>
+            </div>
+            
             <div id="adminSection" style="display: none; margin-top: 30px;">
                 <h3>Admin Functions</h3>
-                <a href="/admin.html" class="admin-button" style="display: inline-block; background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-size: 16px;">Go to Admin Panel</a>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <a href="/admin.html" class="admin-button" style="display: inline-block; background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-size: 16px;">User Management</a>
+                    <a href="/admin-ai.html" class="admin-button" style="display: inline-block; background: #6c5ce7; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-size: 16px;">AI Configuration</a>
+                </div>
             </div>
         </div>
     </div>

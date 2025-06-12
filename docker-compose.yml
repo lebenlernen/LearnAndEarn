@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Node.js application
+  learnandearn-node:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    container_name: learnandearn-node
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=jetzt
+      - DB_USER=odoo
+      - DB_PASSWORD=odoo
+    depends_on:
+      - postgres
+      - spacy
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+      - ./public:/app/public
+      - ./routes:/app/routes
+      - ./services:/app/services
+
+  # SpaCy YouTube API server
+  spacy:
+    build:
+      context: .
+      dockerfile: Dockerfile.spacy
+    container_name: learnandearn-spacy
+    ports:
+      - "8001:8001"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=jetzt
+      - DB_USER=odoo
+      - DB_PASSWORD=odoo
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+
+  # PostgreSQL database (if not using external)
+  postgres:
+    image: postgres:13
+    container_name: learnandearn-postgres
+    ports:
+      - "3143:5432"
+    environment:
+      - POSTGRES_DB=jetzt
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

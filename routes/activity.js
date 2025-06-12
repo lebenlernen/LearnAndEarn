@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { isAuthenticated } = require('../middleware/auth');
+const pool = require('../config/database');
 
 // Start a new activity session
 router.post('/session/start', isAuthenticated, async (req, res) => {
@@ -9,7 +10,7 @@ router.post('/session/start', isAuthenticated, async (req, res) => {
         const { page, timestamp } = req.body;
         
         // Close any existing open sessions for this user
-        await req.db.query(`
+        await pool.query(`
             UPDATE our_activity_sessions 
             SET session_end = CURRENT_TIMESTAMP,
                 total_duration_seconds = EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - session_start))::INTEGER
@@ -17,7 +18,7 @@ router.post('/session/start', isAuthenticated, async (req, res) => {
         `, [userId]);
         
         // Create new session
-        const result = await req.db.query(`
+        const result = await pool.query(`
             INSERT INTO our_activity_sessions (user_id, session_start)
             VALUES ($1, $2)
             RETURNING id
@@ -26,7 +27,7 @@ router.post('/session/start', isAuthenticated, async (req, res) => {
         const sessionId = result.rows[0].id;
         
         // Log initial page view
-        await req.db.query(`
+        await pool.query(`
             INSERT INTO our_activity_log 
             (user_id, session_id, activity_type, activity_detail, page_url, timestamp)
             VALUES ($1, $2, 'page_view', $3, $4, $5)
@@ -53,7 +54,7 @@ router.post('/session/end', isAuthenticated, async (req, res) => {
         const { sessionId, timestamp } = req.body;
         
         // Update session end time and calculate durations
-        const result = await req.db.query(`
+        const result = await pool.query(`
             UPDATE our_activity_sessions 
             SET session_end = $1,
                 total_duration_seconds = EXTRACT(EPOCH FROM ($1 - session_start))::INTEGER,
@@ -99,7 +100,7 @@ router.post('/heartbeat', isAuthenticated, async (req, res) => {
         const { sessionId, timestamp, isActive } = req.body;
         
         // Update session last activity
-        await req.db.query(`
+        await pool.query(`
             UPDATE our_activity_sessions 
             SET last_heartbeat = $1
             WHERE id = $2 AND user_id = $3
@@ -134,7 +135,7 @@ router.post('/log', isAuthenticated, async (req, res) => {
             const { sessionId, activity_type, activity_detail, timestamp } = activity;
             
             // Calculate duration based on previous activity
-            const prevActivity = await req.db.query(`
+            const prevActivity = await pool.query(`
                 SELECT timestamp FROM our_activity_log
                 WHERE session_id = $1 AND user_id = $2
                 ORDER BY timestamp DESC
@@ -152,7 +153,7 @@ router.post('/log', isAuthenticated, async (req, res) => {
             }
             
             // Insert activity log
-            await req.db.query(`
+            await pool.query(`
                 INSERT INTO our_activity_log 
                 (user_id, session_id, activity_type, activity_detail, duration_seconds, page_url, timestamp)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -168,7 +169,7 @@ router.post('/log', isAuthenticated, async (req, res) => {
             
             // Update session activity counts
             if (isLearningActivity(activity_type)) {
-                await req.db.query(`
+                await pool.query(`
                     UPDATE our_activity_sessions
                     SET learning_activities = learning_activities + 1
                     WHERE id = $1
@@ -176,7 +177,7 @@ router.post('/log', isAuthenticated, async (req, res) => {
             }
             
             if (activity_type === 'page_view') {
-                await req.db.query(`
+                await pool.query(`
                     UPDATE our_activity_sessions
                     SET page_views = page_views + 1
                     WHERE id = $1
@@ -205,7 +206,7 @@ router.get('/summary', isAuthenticated, async (req, res) => {
         const { period = 'week' } = req.query;
         
         // Get summary data
-        const summaryResult = await req.db.query(`
+        const summaryResult = await pool.query(`
             SELECT * FROM our_learning_time_summary
             WHERE user_id = $1
         `, [userId]);
@@ -213,12 +214,12 @@ router.get('/summary', isAuthenticated, async (req, res) => {
         // Get period-specific data
         let periodData;
         if (period === 'day') {
-            periodData = await req.db.query(`
+            periodData = await pool.query(`
                 SELECT * FROM our_daily_activity_summary
                 WHERE user_id = $1 AND activity_date = CURRENT_DATE
             `, [userId]);
         } else if (period === 'week') {
-            periodData = await req.db.query(`
+            periodData = await pool.query(`
                 SELECT 
                     SUM(total_time_seconds) as total_time,
                     SUM(active_time_seconds) as active_time,
@@ -229,7 +230,7 @@ router.get('/summary', isAuthenticated, async (req, res) => {
                 AND activity_date >= CURRENT_DATE - INTERVAL '7 days'
             `, [userId]);
         } else if (period === 'month') {
-            periodData = await req.db.query(`
+            periodData = await pool.query(`
                 SELECT 
                     SUM(total_time_seconds) as total_time,
                     SUM(active_time_seconds) as active_time,
@@ -291,7 +292,7 @@ router.get('/history', isAuthenticated, async (req, res) => {
         query += ` ORDER BY al.timestamp DESC LIMIT $${params.length + 1}`;
         params.push(parseInt(limit));
         
-        const result = await req.db.query(query, params);
+        const result = await pool.query(query, params);
         
         res.json({
             success: true,
@@ -318,7 +319,7 @@ router.get('/students', isAuthenticated, async (req, res) => {
             });
         }
         
-        const result = await req.db.query(`
+        const result = await pool.query(`
             SELECT * FROM teacher_student_activity
             ORDER BY last_active DESC
         `);
@@ -348,12 +349,12 @@ router.get('/analytics', isAuthenticated, async (req, res) => {
             });
         }
         
-        const analytics = await req.db.query(`
+        const analytics = await pool.query(`
             SELECT * FROM admin_platform_analytics
         `);
         
         // Get hourly activity pattern
-        const hourlyPattern = await req.db.query(`
+        const hourlyPattern = await pool.query(`
             SELECT 
                 EXTRACT(HOUR FROM timestamp) as hour,
                 COUNT(*) as activity_count
@@ -364,7 +365,7 @@ router.get('/analytics', isAuthenticated, async (req, res) => {
         `);
         
         // Get daily trend
-        const dailyTrend = await req.db.query(`
+        const dailyTrend = await pool.query(`
             SELECT 
                 activity_date,
                 COUNT(DISTINCT user_id) as active_users,
@@ -409,7 +410,7 @@ async function updateDailySummary(userId, session) {
     const today = new Date().toISOString().split('T')[0];
     
     try {
-        await req.db.query(`
+        await pool.query(`
             INSERT INTO our_daily_activity_summary 
             (user_id, activity_date, total_sessions, total_time_seconds, 
              active_time_seconds, learning_time_seconds)
