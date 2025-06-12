@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const paginationContainer = document.getElementById('paginationContainer');
     const searchInfo = document.getElementById('searchInfo');
     const categoryFilter = document.getElementById('categoryFilter');
+    const subtitleQualityFilter = document.getElementById('subtitleQualityFilter');
     
     let currentPage = 1;
     let totalPages = 1;
@@ -82,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Search function
     const performSearch = async (page = 1) => {
         const query = searchInput.value.trim();
+        
         if (!query && !selectedCategory) {
             searchInfo.textContent = 'Please enter a search term or select a category.';
             resultsContainer.innerHTML = '';
@@ -92,11 +94,16 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPage = page;
         lastSearchQuery = query;
         
+        // Get the selected search scope
+        const searchScope = document.querySelector('input[name="searchScope"]:checked').value;
+        
         try {
             const params = new URLSearchParams({
-                q: query,
+                query: query,
                 category: selectedCategory,
-                page: currentPage
+                page: currentPage,
+                searchScope: searchScope,
+                subtitleQuality: subtitleQualityFilter ? subtitleQualityFilter.value : ''
             });
             
             
@@ -154,11 +161,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const decodedTitle = decodeURIComponent(video.title || '').replace(/\+/g, ' ');
         const decodedDescription = decodeURIComponent(video.description || '').replace(/\+/g, ' ');
         
+        // Add subtitle quality indicator
+        // sub_manual is stored as string in database: '1' = auto, '2' = manual
+        const subtitleBadge = video.sub_manual === '1' 
+            ? '<span class="subtitle-badge auto-generated" title="Automatisch generierte Untertitel">🤖 Auto</span>'
+            : '<span class="subtitle-badge manual" title="Manuelle Untertitel">✍️ Manuell</span>';
+        
         card.innerHTML = `
             <div class="video-card-content">
                 <h3>${decodedTitle}</h3>
                 <p>${decodedDescription.substring(0, 150)}${decodedDescription.length > 150 ? '...' : ''}</p>
-                ${video._type ? `<span class="video-category">${video._type}</span>` : ''}
+                <div class="video-channel">${video.channel || 'Unknown Channel'}</div>
+                <div class="video-metadata">
+                    ${video._type ? `<span class="video-category">${video._type}</span>` : ''}
+                    ${subtitleBadge}
+                </div>
             </div>
         `;
         
@@ -213,6 +230,25 @@ document.addEventListener('DOMContentLoaded', () => {
             performSearch(1);
         }
     });
+    
+    // Search scope radio buttons listener
+    const searchScopeRadios = document.querySelectorAll('input[name="searchScope"]');
+    searchScopeRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (lastSearchQuery || selectedCategory) {
+                performSearch(1);
+            }
+        });
+    });
+    
+    // Subtitle quality filter listener
+    if (subtitleQualityFilter) {
+        subtitleQualityFilter.addEventListener('change', () => {
+            if (lastSearchQuery || selectedCategory) {
+                performSearch(1);
+            }
+        });
+    }
     
     
     // Perform initial search if there's a query in the input

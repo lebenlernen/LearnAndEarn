@@ -212,7 +212,7 @@ async function processVideoWithAI(videoId) {
         
         // Check if we need to generate content for auto-subtitled videos
         let contentToUse = video.pure_subtitle;
-        if (video.sub_manual !== 2 && video.pure_subtitle) {
+        if (video.sub_manual === 1 && video.pure_subtitle) {
             console.log(`Generating clean content for video ${videoId}...`);
             const cleanContent = await improveSubtitles(video.pure_subtitle, {
                 targetLanguage: video.language_target || 'de',

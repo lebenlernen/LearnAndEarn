@@ -119,7 +119,7 @@ router.get('/videos-to-process', ...requireAdmin, async (req, res) => {
             LEFT JOIN our_video_questions q ON v.video_id = q.video_id
             WHERE v.pure_subtitle IS NOT NULL
               AND v.pure_subtitle != ''
-              AND (v.sub_manual != 2 OR v.sub_manual IS NULL)
+              AND (v.sub_manual != 1)
             GROUP BY v.video_id, v.title, v.sub_manual, v.pure_subtitle
             HAVING COUNT(q.id) = 0
             ORDER BY LENGTH(v.pure_subtitle) DESC

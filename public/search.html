@@ -48,6 +48,28 @@
             <button id="searchButton">Search</button>
         </div>
         
+        <div class="search-options">
+            <label class="radio-label">
+                <input type="radio" name="searchScope" value="all" checked>
+                <span>Überall suchen</span>
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="searchScope" value="title">
+                <span>Nur in Titeln suchen</span>
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="searchScope" value="channel">
+                <span>Nur in Kanalnamen suchen</span>
+            </label>
+            <div class="subtitle-filter">
+                <label for="subtitleQualityFilter">Untertitel-Qualität:</label>
+                <select id="subtitleQualityFilter" class="subtitle-quality-filter">
+                    <option value="">Alle</option>
+                    <option value="manual">Nur manuelle Untertitel</option>
+                    <option value="auto">Nur automatisch generierte</option>
+                </select>
+            </div>
+        </div>
         
         <div id="searchInfo" class="search-info"></div>
         

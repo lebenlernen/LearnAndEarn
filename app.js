@@ -132,7 +132,9 @@ app.get('/api/videos/search', optionalAuth, async (req, res) => {
             limit = 25,
             hasVocabulary = '',
             hasClozeTest = '',
-            hasQuestions = ''
+            hasQuestions = '',
+            searchScope = 'all',
+            subtitleQuality = ''
         } = req.query;
         const offset = (page - 1) * limit;
         
@@ -142,13 +144,43 @@ app.get('/api/videos/search', optionalAuth, async (req, res) => {
         const havingConditions = [];
         
         if (query) {
-            params.push(`%${query}%`);
-            whereClause += ` AND (v.title ILIKE $${params.length} OR v.description ILIKE $${params.length})`;
+            // Split query into individual words and use AND logic
+            const searchWords = query.trim().split(/\s+/).filter(word => word.length > 0);
+            
+            if (searchWords.length > 0) {
+                const wordConditions = searchWords.map(word => {
+                    params.push(`%${word}%`);
+                    const paramIndex = params.length;
+                    
+                    // Check search scope
+                    switch (searchScope) {
+                        case 'channel':
+                            return `v.channel ILIKE $${paramIndex}`;
+                        case 'title':
+                            return `v.title ILIKE $${paramIndex}`;
+                        case 'all':
+                        default:
+                            return `(v.title ILIKE $${paramIndex} OR v.description ILIKE $${paramIndex})`;
+                    }
+                });
+                
+                // All words must be found (AND logic between words)
+                whereClause += ` AND (${wordConditions.join(' AND ')})`;
+            }
         }
         
         if (category) {
             params.push(category);
             whereClause += ` AND v._type = $${params.length}`;
+        }
+        
+        // Handle subtitle quality filter
+        if (subtitleQuality === 'manual') {
+            // Manual subtitles: sub_manual = '2' (as text)
+            whereClause += ` AND v.sub_manual = '2'`;
+        } else if (subtitleQuality === 'auto') {
+            // Auto-generated subtitles: sub_manual = '1' (as text)
+            whereClause += ` AND v.sub_manual = '1'`;
         }
         
         // Handle feature filters
@@ -170,7 +202,24 @@ app.get('/api/videos/search', optionalAuth, async (req, res) => {
         
         // Get total count
         const countQuery = `SELECT COUNT(*) FROM our_videos v ${whereClause}`;
-        const countResult = await pool.query(countQuery, params);
+        
+        // Debug logging
+        if (subtitleQuality) {
+            console.log('=== SUBTITLE FILTER DEBUG ===');
+            console.log('Subtitle quality param:', subtitleQuality);
+            console.log('Count query:', countQuery);
+            console.log('Params:', params);
+        }
+        
+        let countResult;
+        try {
+            countResult = await pool.query(countQuery, params);
+        } catch (queryError) {
+            console.error('Query error:', queryError.message);
+            console.error('Failed query:', countQuery);
+            console.error('With params:', params);
+            throw queryError;
+        }
         const totalCount = parseInt(countResult.rows[0].count);
         
         // Get paginated results with feature indicators
@@ -185,6 +234,7 @@ app.get('/api/videos/search', optionalAuth, async (req, res) => {
                 v._type, 
                 v.duration, 
                 v.views,
+                v.sub_manual,
                 EXISTS(SELECT 1 FROM our_word_list wl WHERE wl.video_id = v.id::text) as "hasVocabulary",
                 EXISTS(SELECT 1 FROM our_video_cloze vc WHERE vc.video_id = v.id::text) as "hasClozeTest",
                 EXISTS(SELECT 1 FROM our_video_question vq WHERE vq.video_id = v.id::text) as "hasQuestions"
@@ -228,6 +278,7 @@ app.get('/api/videos/:videoId', optionalAuth, async (req, res) => {
                 v.views,
                 v.subtitle,
                 v.pure_subtitle,
+                v.sub_manual,
                 COALESCE(vs.summary, v.pure_subtitle, 'No summary available.') as summary
             FROM our_videos v
             LEFT JOIN our_video_summary vs ON v.id = vs.video
@@ -321,6 +372,24 @@ app.get('/api/admin/users', isAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error fetching users:', error);
         res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
+// Debug endpoint to check sub_manual values
+app.get('/api/debug/sub-manual-stats', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                sub_manual, 
+                COUNT(*) as count
+            FROM our_videos
+            GROUP BY sub_manual
+            ORDER BY sub_manual
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error getting sub_manual stats:', error);
+        res.status(500).json({ error: 'Failed to get stats' });
     }
 });
 

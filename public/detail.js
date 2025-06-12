@@ -1121,12 +1121,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Get appropriate summary content
     const getSummaryContent = (video) => {
-        // Check if transcript is available and not auto-translated
-        const hasGermanTranscript = video.pure_subtitle && !video.is_auto_translated;
+        // Check if transcript is available and not auto-generated
+        // sub_manual: 1 = auto-generated, 2 = manual, null/other = treated as manual
+        const hasManualTranscript = video.pure_subtitle && video.sub_manual !== 1;
         const hasAISummary = video.aiSummary && video.aiSummary.processing_status === 'completed';
         
-        if (hasGermanTranscript) {
-            // Use transcript if it's not auto-translated
+        if (hasManualTranscript) {
+            // Use transcript if it's manually created (not auto-generated)
             return formatSummary(video.pure_subtitle);
         } else if (hasAISummary && video.learningSentences) {
             // Use AI learning sentences if available
@@ -1432,6 +1433,49 @@ document.addEventListener('DOMContentLoaded', () => {
     let clozeScore = 0;
     let clozeAttempts = 0;
     let currentClozeType = 'artikel'; // Default to artikel
+    
+    // Global function for clicking header
+    window.loadVocabulary = async function() {
+        const videoId = getVideoId();
+        if (!videoId) return;
+        
+        // Show loading state
+        document.getElementById('vocabPlaceholder').style.display = 'none';
+        document.getElementById('vocabLoading').style.display = 'block';
+        
+        try {
+            // Load both vocabulary and sentences
+            const [vocabResponse, sentencesResponse] = await Promise.all([
+                fetch(`/api/spacy/vocabulary/${videoId}`, { credentials: 'same-origin' }),
+                fetch(`/api/spacy/sentences/${videoId}`, { credentials: 'same-origin' })
+            ]);
+            
+            if (!vocabResponse.ok) throw new Error('Failed to load vocabulary');
+            
+            const vocabData = await vocabResponse.json();
+            const sentencesData = await sentencesResponse.json();
+            
+            if (vocabData.success && vocabData.data) {
+                displayVocabulary(vocabData.data);
+                
+                // Store sentences globally
+                if (sentencesData.success && sentencesData.data) {
+                    window.videoSentences = sentencesData.data.sentences;
+                    console.log(`Loaded ${window.videoSentences.length} sentences`);
+                }
+                
+                // Setup mode selector
+                setupPracticeModeSelector();
+            } else {
+                throw new Error('No vocabulary data available');
+            }
+        } catch (error) {
+            console.error('Error loading vocabulary:', error);
+            document.getElementById('vocabLoading').style.display = 'none';
+            document.getElementById('vocabPlaceholder').textContent = 'Error loading vocabulary. Please try again.';
+            document.getElementById('vocabPlaceholder').style.display = 'block';
+        }
+    };
     
     // Load SpaCy Vocabulary
     const loadVocabBtn = document.getElementById('loadVocabBtn');
@@ -3014,6 +3058,42 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentQuestionIndex = 0;
     let questionScore = 0;
     let questionAttempts = 0;
+    
+    // Global function for clicking header
+    window.startQuestions = async function() {
+        const videoId = getVideoId();
+        if (!videoId) return;
+        
+        // Show loading state
+        document.getElementById('questionsPlaceholder').style.display = 'none';
+        document.getElementById('questionsLoading').style.display = 'block';
+        
+        try {
+            const response = await fetch(`/api/questions/${videoId}`, {
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) throw new Error('Failed to load questions');
+            
+            const data = await response.json();
+            
+            if (data.questions && data.questions.length > 0) {
+                currentQuestions = data.questions;
+                currentQuestionIndex = 0;
+                questionScore = 0;
+                questionAttempts = 0;
+                displayQuestion();
+            } else {
+                throw new Error('No questions available for this video');
+            }
+        } catch (error) {
+            console.error('Error loading questions:', error);
+            document.getElementById('questionsLoading').style.display = 'none';
+            document.getElementById('questionsPlaceholder').textContent = 
+                'No questions available yet. Questions will be generated automatically.';
+            document.getElementById('questionsPlaceholder').style.display = 'block';
+        }
+    };
     
     // Start Questions button
     const startQuestionsBtn = document.getElementById('startQuestionsBtn');

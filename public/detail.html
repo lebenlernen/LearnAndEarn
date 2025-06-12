@@ -46,7 +46,7 @@
             </div>
         <div class="user-menu">
             <div class="user-info">
-                <span>Welcome, <span class="user-name" id="userName"></span></span>
+                <span>Willkommen, <span class="user-name" id="userName"></span></span>
                 <span class="user-role" id="userRole"></span>
             </div>
             <div class="user-actions">
@@ -117,50 +117,83 @@
         </div>
     </div>
     
-    <!-- Vokabeln Section -->
+    <!-- Vokabeln and Fragen Sections in one row -->
     <div class="container">
-        <div class="section vocabulary-section">
-            <h2>Vokabeln (Vocabulary)</h2>
-            <div class="vocabulary-container">
-                <div id="vocabLoading" class="loading-message" style="display: none;">
-                    <div class="spinner"></div>
-                    <p>Processing vocabulary with SpaCy...</p>
-                    <p class="loading-detail">Analyzing German text with NLP model...</p>
-                </div>
-                <div id="vocabContent" style="display: none;">
-                    <div class="vocab-controls">
-                        <select id="practiceMode" class="practice-mode-selector">
-                            <option value="einzelwort">Einzelwort</option>
-                            <option value="satzauswahl">Satzauswahl</option>
-                            <option value="wortauswahl">Wortauswahl</option>
-                        </select>
-                        <div class="vocab-stats">
-                            <div class="stat-item">
-                                <span class="stat-label">Total Words:</span>
-                                <span id="totalWords" class="stat-value">0</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-label">Unique Words:</span>
-                                <span id="uniqueWords" class="stat-value">0</span>
+        <div class="sections-row">
+            <!-- Vokabeln Section -->
+            <div class="section vocabulary-section half-section">
+                <h2 class="clickable-header" onclick="loadVocabulary()" style="cursor: pointer;">Vokabeln →</h2>
+                <div class="vocabulary-container">
+                    <div id="vocabLoading" class="loading-message" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Processing vocabulary with SpaCy...</p>
+                        <p class="loading-detail">Analyzing German text with NLP model...</p>
+                    </div>
+                    <div id="vocabContent" style="display: none;">
+                        <div class="vocab-controls">
+                            <select id="practiceMode" class="practice-mode-selector">
+                                <option value="einzelwort">Einzelwort</option>
+                                <option value="satzauswahl">Satzauswahl</option>
+                                <option value="wortauswahl">Wortauswahl</option>
+                            </select>
+                            <div class="vocab-stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">Total Words:</span>
+                                    <span id="totalWords" class="stat-value">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Unique Words:</span>
+                                    <span id="uniqueWords" class="stat-value">0</span>
+                                </div>
                             </div>
                         </div>
+                        <div class="vocab-grid" id="vocabGrid">
+                            <!-- Vocabulary items will be inserted here -->
+                        </div>
+                        <div id="sentencesList" class="sentences-list" style="display: none;">
+                            <!-- Sentences will be loaded here -->
+                        </div>
+                        <div id="wordSelectionList" class="word-selection-list" style="display: none;">
+                            <!-- Word selection interface will be here -->
+                        </div>
                     </div>
-                    <div class="vocab-grid" id="vocabGrid">
-                        <!-- Vocabulary items will be inserted here -->
+                    <div id="vocabPlaceholder" class="placeholder-text" style="display: none;">
+                        Click "Load Vocabulary" to analyze this video's vocabulary with SpaCy NLP.
                     </div>
-                    <div id="sentencesList" class="sentences-list" style="display: none;">
-                        <!-- Sentences will be loaded here -->
-                    </div>
-                    <div id="wordSelectionList" class="word-selection-list" style="display: none;">
-                        <!-- Word selection interface will be here -->
-                    </div>
+                    <button class="btn btn-primary" id="loadVocabBtn" style="display: none;">
+                        Load SpaCy Vocabulary
+                    </button>
                 </div>
-                <div id="vocabPlaceholder" class="placeholder-text">
-                    Click "Load Vocabulary" to analyze this video's vocabulary with SpaCy NLP.
+            </div>
+            
+            <!-- Fragen Section -->
+            <div class="section questions-section half-section">
+                <h2 class="clickable-header" onclick="startQuestions()" style="cursor: pointer;">Fragen →</h2>
+                <div class="questions-container">
+                    <div id="questionsLoading" class="loading-message" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Generating questions...</p>
+                        <p class="loading-detail">Creating comprehension questions from video content...</p>
+                    </div>
+                    <div id="questionsContent" style="display: none;">
+                        <div class="question-test" id="questionTest">
+                            <p id="questionText" class="question-text"></p>
+                            <div class="question-options" id="questionOptions"></div>
+                            <div id="questionResult" class="question-result" style="display: none;"></div>
+                            <button id="nextQuestionBtn" class="btn btn-secondary" style="display: none;">Next Question</button>
+                        </div>
+                        <div class="question-stats">
+                            <span>Question <span id="currentQuestionNum">1</span> of <span id="totalQuestionsNum">5</span></span>
+                            <span>Score: <span id="questionScore">0</span>/<span id="questionAttempts">0</span></span>
+                        </div>
+                    </div>
+                    <div id="questionsPlaceholder" class="placeholder-text" style="display: none;">
+                        Click "Start Questions" to practice with comprehension questions.
+                    </div>
+                    <button class="btn btn-primary" id="startQuestionsBtn" style="display: none;">
+                        Start Questions
+                    </button>
                 </div>
-                <button class="btn btn-primary" id="loadVocabBtn">
-                    Load SpaCy Vocabulary
-                </button>
             </div>
         </div>
     </div>
@@ -168,7 +201,7 @@
     <!-- Lückentexte Section -->
     <div class="container">
         <div class="section cloze-section">
-            <h2>Lückentexte (Cloze Tests)</h2>
+            <h2>Lückentexte</h2>
             
             <!-- Exercise Type Selection -->
             <div class="cloze-type-selector">
@@ -209,38 +242,6 @@
                 <div id="clozePlaceholder" class="placeholder-text" style="display: none;">
                     Wählen Sie oben einen Übungstyp aus.
                 </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Fragen Section -->
-    <div class="container">
-        <div class="section questions-section">
-            <h2>Fragen (Questions)</h2>
-            <div class="questions-container">
-                <div id="questionsLoading" class="loading-message" style="display: none;">
-                    <div class="spinner"></div>
-                    <p>Generating questions...</p>
-                    <p class="loading-detail">Creating comprehension questions from video content...</p>
-                </div>
-                <div id="questionsContent" style="display: none;">
-                    <div class="question-test" id="questionTest">
-                        <p id="questionText" class="question-text"></p>
-                        <div class="question-options" id="questionOptions"></div>
-                        <div id="questionResult" class="question-result" style="display: none;"></div>
-                        <button id="nextQuestionBtn" class="btn btn-secondary" style="display: none;">Next Question</button>
-                    </div>
-                    <div class="question-stats">
-                        <span>Question <span id="currentQuestionNum">1</span> of <span id="totalQuestionsNum">5</span></span>
-                        <span>Score: <span id="questionScore">0</span>/<span id="questionAttempts">0</span></span>
-                    </div>
-                </div>
-                <div id="questionsPlaceholder" class="placeholder-text">
-                    Click "Start Questions" to practice with comprehension questions.
-                </div>
-                <button class="btn btn-primary" id="startQuestionsBtn">
-                    Start Questions
-                </button>
             </div>
         </div>
     </div>
