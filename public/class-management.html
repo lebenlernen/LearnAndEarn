@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="de" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <title>Klassenverwaltung - LearnAndEarn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="teacher-dashboard.css">
+    <style>
+        .student-search {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .search-results {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: white;
+        }
+        
+        .student-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .student-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .student-info {
+            flex: 1;
+        }
+        
+        .add-student-btn {
+            padding: 5px 15px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .add-student-btn:hover {
+            background: #218838;
+        }
+        
+        .members-list {
+            margin-top: 30px;
+        }
+        
+        .member-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .remove-btn {
+            padding: 5px 15px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .remove-btn:hover {
+            background: #c82333;
+        }
+        
+        .class-code {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .code-display {
+            font-size: 2em;
+            font-weight: bold;
+            color: #1976d2;
+            letter-spacing: 2px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="userHeader" class="user-header">
+        <div class="nav-links">
+            <a href="/home.html" class="nav-link">Startseite</a>
+            <a href="/teacher-dashboard.html" class="nav-link">Lehrer-Dashboard</a>
+            <a href="/search.html" class="nav-link">Videosuche</a>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <span>Willkommen, <span class="user-name" id="userName"></span></span>
+                <span class="user-role teacher-badge">Lehrer</span>
+            </div>
+            <div class="user-actions">
+                <a href="/profile.html">Mein Profil</a>
+                <button class="logout-button" onclick="logout()">Abmelden</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <a href="/teacher-dashboard.html" class="back-button">← Zurück zum Dashboard</a>
+        
+        <h1>Klassenverwaltung: <span id="className"></span></h1>
+        
+        <div class="dashboard-grid">
+            <!-- Class Code Section -->
+            <div class="dashboard-section">
+                <h2>Klassencode</h2>
+                <div class="class-code">
+                    <p>Schüler können mit diesem Code beitreten:</p>
+                    <div class="code-display" id="classCode">Wird generiert...</div>
+                    <button class="btn btn-secondary" onclick="copyCode()">Code kopieren</button>
+                </div>
+                
+                <h3>Oder Schüler direkt hinzufügen:</h3>
+                <div class="student-search">
+                    <input type="text" id="studentSearch" placeholder="Nach Schülername oder E-Mail suchen..." class="form-control">
+                    <button class="btn btn-primary" onclick="searchStudents()">Suchen</button>
+                    
+                    <div id="searchResults" class="search-results" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <!-- Current Members Section -->
+            <div class="dashboard-section">
+                <h2>Aktuelle Klassenmitglieder</h2>
+                <div id="membersList" class="members-list">
+                    <div class="loading">Mitglieder werden geladen...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="auth.js"></script>
+    <script src="class-management.js"></script>
+</body>
+</html>

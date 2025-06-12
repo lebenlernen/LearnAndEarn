@@ -94,7 +94,7 @@ router.post('/login', async (req, res) => {
     try {
         // Find user by email or username
         const result = await req.db.query(
-            'SELECT id, email, username, password_hash, is_active FROM our_users WHERE email = $1 OR username = $1',
+            'SELECT id, email, username, password_hash, is_active, is_teacher, school_id FROM our_users WHERE email = $1 OR username = $1',
             [email]
         );
         
@@ -137,6 +137,8 @@ router.post('/login', async (req, res) => {
         req.session.email = user.email;
         req.session.username = user.username;
         req.session.roles = roles;
+        req.session.is_teacher = user.is_teacher || false;
+        req.session.school_id = user.school_id;
         
         // Ensure session is saved before sending response
         req.session.save((err) => {
@@ -176,7 +178,7 @@ router.post('/logout', (req, res) => {
 router.get('/me', isAuthenticated, async (req, res) => {
     try {
         const result = await req.db.query(
-            'SELECT id, email, username, is_active, country, mother_language, timezone, use_system_dictation FROM our_users WHERE id = $1',
+            'SELECT id, email, username, is_active, country, mother_language, timezone, use_system_dictation, is_teacher, school_id FROM our_users WHERE id = $1',
             [req.session.userId]
         );
         

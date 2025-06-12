@@ -1,0 +1,144 @@
+/* Student Sessions Styles */
+.sessions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 30px;
+}
+
+.sessions-section {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.sessions-section h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.session-status-header {
+    margin: 20px 0 10px 0;
+    color: #666;
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.classes-list,
+.sessions-list {
+    margin-top: 20px;
+}
+
+.class-card,
+.session-card {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.class-card:hover,
+.session-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.session-card.active {
+    border: 2px solid #28a745;
+    background: #d4edda;
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0% { border-color: #28a745; }
+    50% { border-color: #5cb85c; }
+    100% { border-color: #28a745; }
+}
+
+.class-card h3,
+.session-card h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.class-card p,
+.session-card p {
+    margin: 5px 0;
+    color: #666;
+}
+
+.teacher-name,
+.session-teacher {
+    font-weight: 600;
+    color: #495057;
+}
+
+.session-class {
+    font-size: 0.9em;
+    color: #6c757d;
+}
+
+.session-time {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-top: 10px;
+}
+
+.session-actions {
+    margin-top: 15px;
+}
+
+.session-countdown {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #f0f0f0;
+    border-radius: 6px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.empty-state {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+    padding: 40px 20px;
+}
+
+/* Button Styles */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sessions-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}

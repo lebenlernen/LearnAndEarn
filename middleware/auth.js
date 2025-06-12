@@ -34,6 +34,26 @@ const isAdmin = (req, res, next) => {
     }
 };
 
+// Middleware to check if user is teacher
+const isTeacher = (req, res, next) => {
+    if (req.session && req.session.userId) {
+        // First check if session contains teacher info
+        if (req.session.is_teacher) {
+            req.user = {
+                id: req.session.userId,
+                email: req.session.email,
+                username: req.session.username,
+                is_teacher: true
+            };
+            next();
+        } else {
+            res.status(403).json({ error: 'Lehrerzugriff erforderlich' });
+        }
+    } else {
+        res.status(403).json({ error: 'Lehrerzugriff erforderlich' });
+    }
+};
+
 // Optional authentication - doesn't fail if not authenticated
 const optionalAuth = (req, res, next) => {
     // Just proceed, session info will be available if user is logged in
@@ -61,13 +81,16 @@ const verifyToken = (token) => {
 // Combined middleware - require authentication first, then check admin
 const requireAuth = isAuthenticated;
 const requireAdmin = [isAuthenticated, isAdmin];
+const requireTeacher = [isAuthenticated, isTeacher];
 
 module.exports = {
     isAuthenticated,
     isAdmin,
+    isTeacher,
     optionalAuth,
     generateToken,
     verifyToken,
     requireAuth,
-    requireAdmin
+    requireAdmin,
+    requireTeacher
 }; 

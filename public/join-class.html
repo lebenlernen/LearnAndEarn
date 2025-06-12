@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="de" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <title>Klasse beitreten - LearnAndEarn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
+    <style>
+        .join-container {
+            max-width: 500px;
+            margin: 50px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .join-container h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .code-input-group {
+            margin-bottom: 30px;
+        }
+        
+        .code-input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .code-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.5em;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .code-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        
+        .join-button {
+            width: 100%;
+            padding: 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .join-button:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+        
+        .info-text {
+            text-align: center;
+            color: #666;
+            margin-top: 20px;
+            font-size: 0.95em;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="userHeader" class="user-header">
+        <div class="nav-links">
+            <a href="/home.html" class="nav-link">Startseite</a>
+            <a href="/search.html" class="nav-link">Videosuche</a>
+            <a href="/student-sessions.html" class="nav-link">Unterrichtsstunden</a>
+            <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <span>Willkommen, <span class="user-name" id="userName"></span></span>
+                <span class="user-role" id="userRole">Schüler</span>
+            </div>
+            <div class="user-actions">
+                <a href="/profile.html">Mein Profil</a>
+                <button class="logout-button" onclick="logout()">Abmelden</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="join-container">
+            <h1>Einer Klasse beitreten</h1>
+            
+            <div id="successMessage" class="success-message"></div>
+            <div id="errorMessage" class="error-message"></div>
+            
+            <form id="joinClassForm">
+                <div class="code-input-group">
+                    <label for="classCode">Klassencode eingeben:</label>
+                    <input 
+                        type="text" 
+                        id="classCode" 
+                        class="code-input" 
+                        placeholder="KLS-0000" 
+                        maxlength="8"
+                        pattern="KLS-[0-9]{4}"
+                        required
+                    >
+                </div>
+                
+                <button type="submit" class="join-button">Klasse beitreten</button>
+            </form>
+            
+            <p class="info-text">
+                Fragen Sie Ihren Lehrer nach dem Klassencode, um der Klasse beizutreten.
+            </p>
+        </div>
+    </div>
+    
+    <script src="auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check authentication
+            const authData = await checkAuth();
+            if (!authData.authenticated) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            document.getElementById('userName').textContent = authData.user.username;
+            
+            // Handle form submission
+            document.getElementById('joinClassForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const code = document.getElementById('classCode').value.toUpperCase();
+                const successMsg = document.getElementById('successMessage');
+                const errorMsg = document.getElementById('errorMessage');
+                
+                // Hide messages
+                successMsg.style.display = 'none';
+                errorMsg.style.display = 'none';
+                
+                try {
+                    const response = await fetch('/api/school/join-class', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && data.success) {
+                        successMsg.textContent = `Erfolgreich der Klasse "${data.className}" beigetreten!`;
+                        successMsg.style.display = 'block';
+                        
+                        // Redirect after 2 seconds
+                        setTimeout(() => {
+                            window.location.href = '/student-sessions.html';
+                        }, 2000);
+                    } else {
+                        errorMsg.textContent = data.error || 'Fehler beim Beitreten zur Klasse';
+                        errorMsg.style.display = 'block';
+                    }
+                    
+                } catch (error) {
+                    console.error('Error joining class:', error);
+                    errorMsg.textContent = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.';
+                    errorMsg.style.display = 'block';
+                }
+            });
+            
+            // Auto-format code input
+            document.getElementById('classCode').addEventListener('input', (e) => {
+                let value = e.target.value.toUpperCase();
+                
+                // Remove any non-alphanumeric characters
+                value = value.replace(/[^A-Z0-9]/g, '');
+                
+                // Add the KLS- prefix if not present
+                if (!value.startsWith('KLS') && value.length > 0) {
+                    value = 'KLS' + value;
+                }
+                
+                // Add dash after KLS if needed
+                if (value.length > 3 && !value.includes('-')) {
+                    value = value.slice(0, 3) + '-' + value.slice(3);
+                }
+                
+                // Limit to format KLS-0000
+                if (value.length > 8) {
+                    value = value.slice(0, 8);
+                }
+                
+                e.target.value = value;
+            });
+        });
+    </script>
+</body>
+</html>

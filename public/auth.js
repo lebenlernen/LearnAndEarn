@@ -115,8 +115,11 @@ async function checkAuth() {
         const response = await fetch('/api/auth/me', {
             credentials: 'same-origin'
         });
-        const data = await response.json();
-        return data;
+        if (response.ok) {
+            const data = await response.json();
+            return { authenticated: true, user: data.user };
+        }
+        return { authenticated: false };
     } catch (error) {
         console.error('Auth check error:', error);
         return { authenticated: false };
@@ -168,4 +171,62 @@ async function logout() {
     } catch (error) {
         console.error('Logout error:', error);
     }
+}
+
+// Update navigation based on user role
+async function updateNavigationForRole() {
+    const authData = await checkAuth();
+    if (authData.authenticated && authData.user.is_teacher) {
+        // Add teacher dashboard link to navigation
+        const navLinks = document.querySelector('.nav-links');
+        if (navLinks && !document.querySelector('a[href="/teacher-dashboard.html"]')) {
+            const teacherLink = document.createElement('a');
+            teacherLink.href = '/teacher-dashboard.html';
+            teacherLink.className = 'nav-link';
+            teacherLink.textContent = 'Lehrer-Dashboard';
+            
+            // Insert after Videosuche
+            const searchLink = document.querySelector('a[href="/search.html"]');
+            if (searchLink && searchLink.parentNode) {
+                searchLink.parentNode.insertBefore(teacherLink, searchLink.nextSibling);
+            }
+        }
+    } else if (authData.authenticated) {
+        // Only show student sessions link if they have classes
+        checkStudentEnrollment();
+    }
+}
+
+// Check if student is enrolled in any classes
+async function checkStudentEnrollment() {
+    try {
+        const response = await fetch('/api/school/my-enrollment-status');
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Only show sessions link if student has classes
+            if (data.hasClasses) {
+                const navLinks = document.querySelector('.nav-links');
+                if (navLinks && !document.querySelector('a[href="/student-sessions.html"]')) {
+                    const sessionsLink = document.createElement('a');
+                    sessionsLink.href = '/student-sessions.html';
+                    sessionsLink.className = 'nav-link';
+                    sessionsLink.textContent = 'Meine Klassen';
+                    
+                    // Insert after Videosuche
+                    const searchLink = document.querySelector('a[href="/search.html"]');
+                    if (searchLink && searchLink.parentNode) {
+                        searchLink.parentNode.insertBefore(sessionsLink, searchLink.nextSibling);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error checking enrollment:', error);
+    }
+}
+
+// Call this when DOM is loaded on pages with navigation
+if (document.querySelector('.nav-links')) {
+    document.addEventListener('DOMContentLoaded', updateNavigationForRole);
 } 

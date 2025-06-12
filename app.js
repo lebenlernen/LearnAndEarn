@@ -4,10 +4,16 @@ const path = require('path');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const cookieParser = require('cookie-parser');
+const http = require('http');
 require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+const server = http.createServer(app);
+
+// Initialize WebSocket service
+const webSocketService = require('./services/websocket-service');
+webSocketService.initialize(server);
 
 // Database connection
 const pool = new Pool({
@@ -102,6 +108,10 @@ app.use('/api/videos/youtube', youtubeRoutes);
 // Import AI summaries routes
 const aiSummariesRoutes = require('./routes/ai-summaries');
 app.use('/api/ai-summaries', aiSummariesRoutes);
+
+// Import school routes
+const schoolRoutes = require('./routes/school');
+app.use('/api/school', schoolRoutes);
 
 // Import auth middleware
 const { optionalAuth, isAuthenticated, isAdmin } = require('./middleware/auth');
@@ -393,7 +403,11 @@ app.get('/api/debug/sub-manual-stats', async (req, res) => {
     }
 });
 
+// Make WebSocket service available to routes
+app.set('wsService', webSocketService);
+
 // Start server
-app.listen(port, () => {
+server.listen(port, () => {
     console.log(`Server listening at http://localhost:${port}`);
+    console.log(`WebSocket server ready`);
 });

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="de" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" content="notranslate">
+    <title>Meine Unterrichtsstunden - LearnAndEarn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="student-sessions.css">
+</head>
+<body>
+    <div id="userHeader" class="user-header">
+        <div class="nav-links">
+            <a href="/home.html" class="nav-link">Startseite</a>
+            <a href="/search.html" class="nav-link">Videosuche</a>
+            <a href="/student-sessions.html" class="nav-link active">Unterrichtsstunden</a>
+            <a href="/progress.html" class="nav-link">Mein Fortschritt</a>
+        </div>
+        <div class="user-menu">
+            <div class="user-info">
+                <span>Willkommen, <span class="user-name" id="userName"></span></span>
+                <span class="user-role" id="userRole">Schüler</span>
+            </div>
+            <div class="user-actions">
+                <a href="/profile.html">Mein Profil</a>
+                <button class="logout-button" onclick="logout()">Abmelden</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h1>Meine Unterrichtsstunden</h1>
+        
+        <div class="sessions-grid">
+            <!-- My Classes -->
+            <div class="sessions-section">
+                <h2>Meine Klassen</h2>
+                <a href="/join-class.html" class="btn btn-primary" style="margin-bottom: 20px; display: inline-block;">
+                    + Klasse beitreten
+                </a>
+                <div id="myClasses" class="classes-list">
+                    <div class="loading">Klassen werden geladen...</div>
+                </div>
+            </div>
+            
+            <!-- Upcoming Sessions -->
+            <div class="sessions-section">
+                <h2>Bevorstehende Stunden</h2>
+                <div id="upcomingSessions" class="sessions-list">
+                    <div class="loading">Stunden werden geladen...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="auth.js"></script>
+    <script src="student-sessions.js"></script>
+</body>
+</html>
